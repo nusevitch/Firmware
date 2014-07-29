@@ -441,6 +441,10 @@ then
 	fi
 
 	mavlink start $MAVLINK_FLAGS
+	
+	# start mavlink for jager
+	mavlink start -d /dev/ttyS2 -b 115200
+	mavlink start -d /dev/ttyS6 -b 115200
 
 	#
 	# Sensors, Logging, GPS
