@@ -1908,6 +1908,59 @@ protected:
 };
 
 
+class MavlinkStreamApntStatus : public MavlinkStream
+{
+public:
+	const char *get_name() const
+	{
+		return MavlinkStreamApntStatus::get_name_static();
+	}
+
+	static const char *get_name_static()
+	{
+		return "APNT_STATUS";
+	}
+
+	uint8_t get_id()
+	{
+		return MAVLINK_MSG_ID_APNT_STATUS;
+	}
+
+	static MavlinkStream *new_instance()
+	{
+		return new MavlinkStreamApntStatus();
+	}
+
+private:
+	MavlinkOrbSubscription *apnt_sub;
+	uint64_t apnt_time;
+
+	/* do not allow top copying this class */
+	MavlinkStreamApntStatus(MavlinkStreamApntStatus &);
+	MavlinkStreamApntStatus& operator = (const MavlinkStreamApntStatus &);
+
+protected:
+	explicit MavlinkStreamApntStatus() : MavlinkStream(),
+		apnt_sub(nullptr),
+		apnt_time(0)
+	{}
+
+	void subscribe(Mavlink *mavlink)
+	{
+		apnt_sub = mavlink->add_orb_subscription(ORB_ID(apnt_status));
+	}
+
+	void send(const hrt_abstime t)
+	{
+		struct apnt_status_s apnt_status;
+
+		if (apnt_sub->update(&apnt_time, &apnt_status)) {
+			mavlink_msg_apnt_status_send(_channel, apnt_status.status, apnt_status.connections);
+		}
+	}
+};
+
+
 StreamListItem *streams_list[] = {
 	new StreamListItem(&MavlinkStreamHeartbeat::new_instance, &MavlinkStreamHeartbeat::get_name_static),
 	new StreamListItem(&MavlinkStreamSysStatus::new_instance, &MavlinkStreamSysStatus::get_name_static),
@@ -1936,5 +1989,6 @@ StreamListItem *streams_list[] = {
 	new StreamListItem(&MavlinkStreamCameraCapture::new_instance, &MavlinkStreamCameraCapture::get_name_static),
 	new StreamListItem(&MavlinkStreamDistanceSensor::new_instance, &MavlinkStreamDistanceSensor::get_name_static),
 	new StreamListItem(&MavlinkStreamViconPositionEstimate::new_instance, &MavlinkStreamViconPositionEstimate::get_name_static),
+	new StreamListItem(&MavlinkStreamApntStatus::new_instance, &MavlinkStreamApntStatus::get_name_static),
 	nullptr
 };
