@@ -150,6 +150,10 @@ MODULES		+= examples/px4_simple_app
 #MODULES			+= examples/hwtest
 
 #
+# APNT test module
+MODULES += modules/everything_is_awesome
+
+#
 # Transitional support - add commands from the NuttX export archive.
 #
 # In general, these should move to modules over time.

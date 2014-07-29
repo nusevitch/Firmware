@@ -1,6 +1,6 @@
 /**
  * @file apnt_status.h
- * Currend status of the apnt system running on boards jager.
+ * Current status of the apnt system running on boards jager.
  *
  * @author Adrien Perkins <adrienp@stanford.edu>
  * July 2014
