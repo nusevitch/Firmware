@@ -172,6 +172,9 @@ MavlinkReceiver::handle_message(mavlink_message_t *msg)
 		MavlinkFTP::getServer()->handle_message(_mavlink, msg);
 		break;
 
+	case MAVLINK_MSG_ID_APNT_STATUS:
+		handle_message_apnt_status(msg);
+
 	default:
 		break;
 	}
@@ -914,6 +917,28 @@ MavlinkReceiver::handle_message_hil_state_quaternion(mavlink_message_t *msg)
 		}
 	}
 }
+
+
+void
+MavlinkReceiver::handle_message_apnt_status(mavlink_message_t *msg) {
+
+	mavlink_apnt_status_t apnt_status;
+	mavlink_msg_apnt_status_decode(msg, &apnt_status);
+
+	struct apnt_status_s as;
+	memset(&as, 0, sizeof(as));
+
+	as.timestamp = hrt_absolute_time();
+	as.status = apnt_status.running;
+	as.connections = apnt_status.connections;
+
+	if (_apnt_status_pub < 0) {
+		_apnt_status_pub = orb_advertise(ORB_ID(apnt_status), &apnt_status);
+	} else {
+		orb_publish(ORB_ID(apnt_status), _apnt_status_pub, &apnt_status);
+	}
+}
+
 
 
 /**
