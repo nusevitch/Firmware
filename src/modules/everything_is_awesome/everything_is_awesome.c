@@ -51,7 +51,9 @@ int everything_is_awesome_main(int argc, char *argv[]) {
 			if (fds[0].revents & POLLIN) {
 				struct apnt_status_s apnt_status;
 				orb_copy(ORB_ID(apnt_status), apnt_sub_fd, &apnt_status);
-				printf("[everything_is_awesome] APNT Status: \t%llu\t%u\t%u\n", apnt_status.timestamp, apnt_status.status, apnt_status.connections);
+				printf("[everything_is_awesome] APNT Status: \n"
+						"\t%llu\n\t%u\t%u\t%u\n", apnt_status.timestamp,
+						apnt_status.status, apnt_status.connections, apnt_status.gps_snr);
 			}
 		}
 	}
