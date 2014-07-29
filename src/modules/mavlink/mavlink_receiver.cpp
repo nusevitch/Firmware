@@ -932,11 +932,12 @@ MavlinkReceiver::handle_message_apnt_status(mavlink_message_t *msg) {
 	as.timestamp = hrt_absolute_time();
 	as.status = apnt_status.running;
 	as.connections = apnt_status.connections;
+	as.gps_snr++;
 
 	if (_apnt_status_pub < 0) {
-		_apnt_status_pub = orb_advertise(ORB_ID(apnt_status), &apnt_status);
+		_apnt_status_pub = orb_advertise(ORB_ID(apnt_status), &as);
 	} else {
-		orb_publish(ORB_ID(apnt_status), _apnt_status_pub, &apnt_status);
+		orb_publish(ORB_ID(apnt_status), _apnt_status_pub, &as);
 	}
 }
 
