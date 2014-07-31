@@ -178,6 +178,16 @@ MavlinkReceiver::handle_message(mavlink_message_t *msg)
 
 	case MAVLINK_MSG_ID_APNT_GPS_STATUS:
 		handle_message_apnt_gps_status(msg);
+		break;
+	case MAVLINK_MSG_ID_APNT_SITE_STATUS:
+		handle_message_apnt_site_status(msg);
+		break;
+	case MAVLINK_MSG_ID_TRACKING_STATUS:
+		handle_message_tracking_status(msg);
+		break;
+	case MAVLINK_MSG_ID_APNT_POSITION:
+		handle_message_apnt_position(msg);
+		break;
 
 	default:
 		break;
