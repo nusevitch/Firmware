@@ -222,5 +222,14 @@ ORB_DEFINE(tecs_status, struct tecs_status_s);
 #include "topics/wind_estimate.h"
 ORB_DEFINE(wind_estimate, struct wind_estimate_s);
 
-#include "topics/apnt_status.h"
-ORB_DEFINE(apnt_status, struct apnt_status_s);
+#include "topics/apnt_gps_status.h"
+ORB_DEFINE(apnt_gps_status, struct apnt_gps_status_s);
+
+#include "topics/apnt_site_status.h"
+ORB_DEFINE(apnt_site_status, struct apnt_site_status_s);
+
+#include "topics/tracking_status.h"
+ORB_DEFINE(tracking_status, struct tracking_status_s);
+
+#include "topics/apnt_position.h"
+ORB_DEFINE(apnt_position, struct apnt_position_s);
