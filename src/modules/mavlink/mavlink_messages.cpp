@@ -69,7 +69,10 @@
 #include <uORB/topics/airspeed.h>
 #include <uORB/topics/battery_status.h>
 #include <uORB/topics/navigation_capabilities.h>
-#include <uORB/topics/apnt_status.h>
+#include <uORB/topics/apnt_gps_status.h>
+#include <uORB/topics/apnt_site_status.h>
+#include <uORB/topics/tracking_status.h>
+#include <uORB/topics/apnt_position.h>
 #include <drivers/drv_rc_input.h>
 #include <drivers/drv_pwm_output.h>
 #include <drivers/drv_range_finder.h>
@@ -1909,54 +1912,214 @@ protected:
 };
 
 
-class MavlinkStreamApntStatus : public MavlinkStream
+class MavlinkStreamApntGPSStatus : public MavlinkStream
 {
 public:
 	const char *get_name() const
 	{
-		return MavlinkStreamApntStatus::get_name_static();
+		return MavlinkStreamApntGPSStatus::get_name_static();
 	}
 
 	static const char *get_name_static()
 	{
-		return "APNT_STATUS";
+		return "APNT_GPS_STATUS";
 	}
 
 	uint8_t get_id()
 	{
-		return MAVLINK_MSG_ID_APNT_STATUS;
+		return MAVLINK_MSG_ID_APNT_GPS_STATUS;
 	}
 
 	static MavlinkStream *new_instance()
 	{
-		return new MavlinkStreamApntStatus();
+		return new MavlinkStreamApntGPSStatus();
 	}
 
 private:
-	MavlinkOrbSubscription *apnt_sub;
-	uint64_t apnt_time;
+	MavlinkOrbSubscription *apnt_gps_sub;
+	uint64_t time;
 
 	/* do not allow top copying this class */
-	MavlinkStreamApntStatus(MavlinkStreamApntStatus &);
-	MavlinkStreamApntStatus& operator = (const MavlinkStreamApntStatus &);
+	MavlinkStreamApntGPSStatus(MavlinkStreamApntGPSStatus &);
+	MavlinkStreamApntGPSStatus& operator = (const MavlinkStreamApntGPSStatus &);
 
 protected:
-	explicit MavlinkStreamApntStatus() : MavlinkStream(),
-		apnt_sub(nullptr),
-		apnt_time(0)
+	explicit MavlinkStreamApntGPSStatus() : MavlinkStream(),
+		apnt_gps_sub(nullptr),
+		time(0)
 	{}
 
 	void subscribe(Mavlink *mavlink)
 	{
-		apnt_sub = mavlink->add_orb_subscription(ORB_ID(apnt_status));
+		apnt_gps_sub = mavlink->add_orb_subscription(ORB_ID(apnt_gps_status));
 	}
 
 	void send(const hrt_abstime t)
 	{
-		struct apnt_status_s apnt_status;
+		struct apnt_gps_status_s status;
 
-		if (apnt_sub->update(&apnt_time, &apnt_status)) {
-			mavlink_msg_apnt_status_send(_channel, apnt_status.status, apnt_status.connections);
+		if (apnt_gps_sub->update(&time, &status)) {
+			mavlink_msg_apnt_gps_status_send(_channel, status.timestamp, status.lat, status.lon, status.alt,
+					status.prn, status.azimuth, status.elevation, status.snr);
+		}
+	}
+};
+
+
+class MavlinkStreamApntSiteStatus : public MavlinkStream
+{
+public:
+	const char *get_name() const
+	{
+		return MavlinkStreamApntGPSStatus::get_name_static();
+	}
+
+	static const char *get_name_static()
+	{
+		return "APNT_SITE_STATUS";
+	}
+
+	uint8_t get_id()
+	{
+		return MAVLINK_MSG_ID_APNT_SITE_STATUS;
+	}
+
+	static MavlinkStream *new_instance()
+	{
+		return new MavlinkStreamApntSiteStatus();
+	}
+
+private:
+	MavlinkOrbSubscription *apnt_site_sub;
+	uint64_t time;
+
+	/* do not allow top copying this class */
+	MavlinkStreamApntSiteStatus(MavlinkStreamApntSiteStatus &);
+	MavlinkStreamApntSiteStatus& operator = (const MavlinkStreamApntSiteStatus &);
+
+protected:
+	explicit MavlinkStreamApntSiteStatus() : MavlinkStream(),
+		apnt_site_sub(nullptr),
+		time(0)
+	{}
+
+	void subscribe(Mavlink *mavlink)
+	{
+		apnt_site_sub = mavlink->add_orb_subscription(ORB_ID(apnt_site_status));
+	}
+
+	void send(const hrt_abstime t)
+	{
+		struct apnt_site_status_s status;
+
+		if (apnt_site_sub->update(&time, &status)) {
+			mavlink_msg_apnt_site_status_send(_channel, status.timestamp, status.id, status.lat, status.lon,
+					status.signal);
+		}
+	}
+};
+
+class MavlinkStreamTrackingStatus : public MavlinkStream
+{
+public:
+	const char *get_name() const
+	{
+		return MavlinkStreamTrackingStatus::get_name_static();
+	}
+
+	static const char *get_name_static()
+	{
+		return "TRACKING_STATUS";
+	}
+
+	uint8_t get_id()
+	{
+		return MAVLINK_MSG_ID_TRACKING_STATUS;
+	}
+
+	static MavlinkStream *new_instance()
+	{
+		return new MavlinkStreamTrackingStatus();
+	}
+
+private:
+	MavlinkOrbSubscription *tracking_sub;
+	uint64_t time;
+
+	/* do not allow top copying this class */
+	MavlinkStreamTrackingStatus(MavlinkStreamTrackingStatus &);
+	MavlinkStreamTrackingStatus& operator = (const MavlinkStreamTrackingStatus &);
+
+protected:
+	explicit MavlinkStreamTrackingStatus() : MavlinkStream(),
+		tracking_sub(nullptr),
+		time(0)
+	{}
+
+	void subscribe(Mavlink *mavlink)
+	{
+		tracking_sub = mavlink->add_orb_subscription(ORB_ID(tracking_status));
+	}
+
+	void send(const hrt_abstime t)
+	{
+		struct tracking_status_s status;
+
+		if (tracking_sub->update(&time, &status)) {
+			mavlink_msg_tracking_status_send(_channel, status.timestamp_status, status.timestamp_cmd,
+					status.status, status.cmd_type,	status.cmd_dist, status.cmd_direction);
+		}
+	}
+};
+
+class MavlinkStreamApntPosition : public MavlinkStream
+{
+public:
+	const char *get_name() const
+	{
+		return MavlinkStreamApntPosition::get_name_static();
+	}
+
+	static const char *get_name_static()
+	{
+		return "APNT_POSITION";
+	}
+
+	uint8_t get_id()
+	{
+		return MAVLINK_MSG_ID_APNT_POSITION;
+	}
+
+	static MavlinkStream *new_instance()
+	{
+		return new MavlinkStreamApntPosition();
+	}
+
+private:
+	MavlinkOrbSubscription *apnt_position_sub;
+	uint64_t time;
+
+	/* do not allow top copying this class */
+	MavlinkStreamApntPosition(MavlinkStreamApntPosition &);
+	MavlinkStreamApntPosition& operator = (const MavlinkStreamApntPosition &);
+
+protected:
+	explicit MavlinkStreamApntPosition() : MavlinkStream(),
+		apnt_position_sub(nullptr),
+		time(0)
+	{}
+
+	void subscribe(Mavlink *mavlink)
+	{
+		apnt_position_sub = mavlink->add_orb_subscription(ORB_ID(apnt_position));
+	}
+
+	void send(const hrt_abstime t)
+	{
+		struct apnt_position_s position;
+
+		if (apnt_position_sub->update(&time, &position)) {
+			mavlink_msg_apnt_position_send(_channel, position.timestamp, position.lat, position.lon);
 		}
 	}
 };
@@ -1990,6 +2153,9 @@ StreamListItem *streams_list[] = {
 	new StreamListItem(&MavlinkStreamCameraCapture::new_instance, &MavlinkStreamCameraCapture::get_name_static),
 	new StreamListItem(&MavlinkStreamDistanceSensor::new_instance, &MavlinkStreamDistanceSensor::get_name_static),
 	new StreamListItem(&MavlinkStreamViconPositionEstimate::new_instance, &MavlinkStreamViconPositionEstimate::get_name_static),
-	new StreamListItem(&MavlinkStreamApntStatus::new_instance, &MavlinkStreamApntStatus::get_name_static),
+	new StreamListItem(&MavlinkStreamApntGPSStatus::new_instance, &MavlinkStreamApntGPSStatus::get_name_static),
+	new StreamListItem(&MavlinkStreamApntSiteStatus::new_instance, &MavlinkStreamApntSiteStatus::get_name_static),
+	new StreamListItem(&MavlinkStreamTrackingStatus::new_instance, &MavlinkStreamTrackingStatus::get_name_static),
+	new StreamListItem(&MavlinkStreamApntPosition::new_instance, &MavlinkStreamApntPosition::get_name_static),
 	nullptr
 };

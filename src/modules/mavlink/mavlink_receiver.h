@@ -70,7 +70,10 @@
 #include <uORB/topics/debug_key_value.h>
 #include <uORB/topics/airspeed.h>
 #include <uORB/topics/battery_status.h>
-#include <uORB/topics/apnt_status.h>
+#include <uORB/topics/apnt_gps_status.h>
+#include <uORB/topics/apnt_site_status.h>
+#include <uORB/topics/tracking_status.h>
+#include <uORB/topics/apnt_position.h>
 
 #include "mavlink_ftp.h"
 
@@ -121,7 +124,10 @@ private:
 	void handle_message_hil_sensor(mavlink_message_t *msg);
 	void handle_message_hil_gps(mavlink_message_t *msg);
 	void handle_message_hil_state_quaternion(mavlink_message_t *msg);
-	void handle_message_apnt_status(mavlink_message_t *msg);
+	void handle_message_apnt_gps_status(mavlink_message_t *msg);
+	void handle_message_apnt_site_status(mavlink_message_t *msg);
+	void handle_message_tracking_status(mavlink_message_t *msg);
+	void handle_message_apnt_position(mavlink_message_t *msg);
 
 	void *receive_thread(void *arg);
 
@@ -150,7 +156,10 @@ private:
 	orb_advert_t _telemetry_status_pub;
 	orb_advert_t _rc_pub;
 	orb_advert_t _manual_pub;
-	orb_advert_t _apnt_status_pub;
+	orb_advert_t _apnt_gps_status_pub;
+	orb_advert_t _apnt_site_status_pub;
+	orb_advert_t _tracking_status_pub;
+	orb_advert_t _apnt_position_pub;
 	bool _radio_status_available;
 	int _control_mode_sub;
 	int _hil_frames;

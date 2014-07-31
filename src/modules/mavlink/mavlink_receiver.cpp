@@ -111,7 +111,10 @@ MavlinkReceiver::MavlinkReceiver(Mavlink *parent) :
 	_telemetry_status_pub(-1),
 	_rc_pub(-1),
 	_manual_pub(-1),
-	_apnt_status_pub(-1),
+	_apnt_gps_status_pub(-1),
+	_apnt_site_status_pub(-1),
+	_tracking_status_pub(-1),
+	_apnt_position_pub(-1),
 	_radio_status_available(false),
 	_control_mode_sub(orb_subscribe(ORB_ID(vehicle_control_mode))),
 	_hil_frames(0),
@@ -173,8 +176,8 @@ MavlinkReceiver::handle_message(mavlink_message_t *msg)
 		MavlinkFTP::getServer()->handle_message(_mavlink, msg);
 		break;
 
-	case MAVLINK_MSG_ID_APNT_STATUS:
-		handle_message_apnt_status(msg);
+	case MAVLINK_MSG_ID_APNT_GPS_STATUS:
+		handle_message_apnt_gps_status(msg);
 
 	default:
 		break;
@@ -921,23 +924,105 @@ MavlinkReceiver::handle_message_hil_state_quaternion(mavlink_message_t *msg)
 
 
 void
-MavlinkReceiver::handle_message_apnt_status(mavlink_message_t *msg) {
+MavlinkReceiver::handle_message_apnt_gps_status(mavlink_message_t *msg) {
 
-	mavlink_apnt_status_t apnt_status;
-	mavlink_msg_apnt_status_decode(msg, &apnt_status);
+	mavlink_apnt_gps_status_t ag_status;
+	mavlink_msg_apnt_gps_status_decode(msg, &ag_status);
 
-	struct apnt_status_s as;
-	memset(&as, 0, sizeof(as));
+	struct apnt_gps_status_s gps_stat_s;
+	memset(&gps_stat_s, 0, sizeof(gps_stat_s));
 
-	as.timestamp = hrt_absolute_time();
-	as.status = apnt_status.running;
-	as.connections = apnt_status.connections;
-	as.gps_snr++;
 
-	if (_apnt_status_pub < 0) {
-		_apnt_status_pub = orb_advertise(ORB_ID(apnt_status), &as);
+	gps_stat_s.timestamp = ag_status.timestamp_usec; // for timestamp, use the one sent from APNT, assuming it's GPS time?
+	gps_stat_s.lat = ag_status.gps_lat;
+	gps_stat_s.lon = ag_status.gps_lon;
+	gps_stat_s.alt = ag_status.gps_alt;
+
+	for (int i = 0; i < 8; i++) {
+		gps_stat_s.prn[i] = ag_status.prn[i];
+		gps_stat_s.azimuth[i] = ag_status.azimth[i];
+		gps_stat_s.elevation[i] = ag_status.elevation[i];
+		gps_stat_s.snr[i] = ag_status.snr[i];
+	}
+
+
+	if (_apnt_gps_status_pub < 0) {
+		_apnt_gps_status_pub = orb_advertise(ORB_ID(apnt_gps_status), &gps_stat_s);
 	} else {
-		orb_publish(ORB_ID(apnt_status), _apnt_status_pub, &as);
+		orb_publish(ORB_ID(apnt_gps_status), _apnt_gps_status_pub, &gps_stat_s);
+	}
+}
+
+
+void
+MavlinkReceiver::handle_message_apnt_site_status(mavlink_message_t *msg) {
+
+	mavlink_apnt_site_status_t as_status;
+	mavlink_msg_apnt_site_status_decode(msg, &as_status);
+
+	struct apnt_site_status_s site_stat_s;
+	memset(&site_stat_s, 0, sizeof(site_stat_s));
+
+	// again timestamp is unknwon whether unix or whether I need to inject it...
+	site_stat_s.timestamp = as_status.timestamp_usec;
+
+	for (int i=0; i < 4; i++) {
+		site_stat_s.id[i] = as_status.site_id[i];
+		site_stat_s.lat[i] = as_status.site_lat[i];
+		site_stat_s.lon[i] = as_status.site_lon[i];
+		site_stat_s.signal[i] = as_status.site_signal[i];
+	}
+
+
+
+	if (_apnt_site_status_pub < 0) {
+		_apnt_site_status_pub = orb_advertise(ORB_ID(apnt_site_status), &site_stat_s);
+	} else {
+		orb_publish(ORB_ID(apnt_site_status), _apnt_site_status_pub, &site_stat_s);
+	}
+}
+
+void
+MavlinkReceiver::handle_message_tracking_status(mavlink_message_t *msg) {
+
+	mavlink_tracking_status_t t_status;
+	mavlink_msg_tracking_status_decode(msg, &t_status);
+
+	struct tracking_status_s tracking_stat_s;
+	memset(&tracking_stat_s, 0, sizeof(tracking_stat_s));
+
+	tracking_stat_s.timestamp_status = hrt_absolute_time();
+	tracking_stat_s.timestamp_cmd = hrt_absolute_time();
+	tracking_stat_s.status = t_status.status;
+	tracking_stat_s.cmd_type = t_status.cmd_type;
+	tracking_stat_s.cmd_dist = t_status.cmd_dist;
+	tracking_stat_s.cmd_direction = t_status.cmd_direction;
+
+
+	if (_tracking_status_pub < 0) {
+		_tracking_status_pub = orb_advertise(ORB_ID(tracking_status), &tracking_stat_s);
+	} else {
+		orb_publish(ORB_ID(tracking_status), _tracking_status_pub, &tracking_stat_s);
+	}
+}
+
+void
+MavlinkReceiver::handle_message_apnt_position(mavlink_message_t *msg) {
+
+	mavlink_apnt_position_t a_position;
+	mavlink_msg_apnt_position_decode(msg, &a_position);
+
+	struct apnt_position_s apnt_pos_s;
+	memset(&apnt_pos_s, 0, sizeof(apnt_pos_s));
+
+	apnt_pos_s.timestamp = a_position.timestamp_usec;
+	apnt_pos_s.lat = a_position.apnt_lat;
+	apnt_pos_s.lon = a_position.apnt_lon;
+
+	if (_apnt_position_pub < 0) {
+		_apnt_position_pub = orb_advertise(ORB_ID(apnt_position), &apnt_pos_s);
+	} else {
+		orb_publish(ORB_ID(apnt_position), _apnt_position_pub, &apnt_pos_s);
 	}
 }
 
