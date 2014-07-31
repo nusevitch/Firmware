@@ -16,7 +16,7 @@
 #include <string.h>
 
 #include <uORB/uORB.h>
-#include <uORB/topics/apnt_status.h>
+#include <uORB/topics/apnt_gps_status.h>
 
 __EXPORT int everything_is_awesome_main(int argc, char *argv[]);
 
@@ -24,7 +24,7 @@ int everything_is_awesome_main(int argc, char *argv[]) {
 	printf("Watching APNT status\n");
 
 	/* subscribe to sensor_combined topic */
-	int apnt_sub_fd = orb_subscribe(ORB_ID(apnt_status));
+	int apnt_sub_fd = orb_subscribe(ORB_ID(apnt_gps_status));
 
 	// only listen to the status once a second
 	orb_set_interval(apnt_sub_fd, 1000);
@@ -49,11 +49,11 @@ int everything_is_awesome_main(int argc, char *argv[]) {
 			error_counter++;
 		} else {
 			if (fds[0].revents & POLLIN) {
-				struct apnt_status_s apnt_status;
-				orb_copy(ORB_ID(apnt_status), apnt_sub_fd, &apnt_status);
+				struct apnt_gps_status_s apnt_status;
+				orb_copy(ORB_ID(apnt_gps_status), apnt_sub_fd, &apnt_status);
 				printf("[everything_is_awesome] APNT Status: \n"
 						"\t%llu\n\t%u\t%u\t%u\n", apnt_status.timestamp,
-						apnt_status.status, apnt_status.connections, apnt_status.gps_snr);
+						apnt_status.prn[0], apnt_status.elevation[0], apnt_status.snr[0]);
 			}
 		}
 	}
