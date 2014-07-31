@@ -393,6 +393,48 @@ struct log_TEL_s {
 	uint64_t heartbeat_time;
 };
 
+/* --- AGPS - APNT GPS STATUS --- */
+#define LOG_AGPS_MSG 38
+struct log_AGPS_s {
+	uint64_t gps_time;
+	float lat;
+	float lon;
+	float alt;
+	uint8_t prn[8];
+	int16_t azimuth[8];
+	uint8_t elevation[8];
+	uint8_t snr[8];
+};
+
+/* --- ASIT - APNT SITE STATUS --- */
+#define LOG_ASIT_MSG 39
+struct log_ASIT_s {
+	uint32_t id[4];
+	float lat[4];
+	float lon[4];
+	uint16_t signal[4];
+};
+
+
+/* --- TRAC - TRACKING STATUS --- */
+#define LOG_TRAC_MSG 40
+struct log_TRAC_s {
+	uint64_t time_last_cmd;
+	uint8_t status;
+	uint8_t cmd_type;
+	float cmd_dist;
+	uint8_t cmd_direction;
+};
+
+
+/* --- APOS - APNT POSITION --- */
+#define LOG_APOS_MSG 41
+struct log_APOS_s {
+	uint64_t position_time;
+	float lat;
+	float lon;
+};
+
 
 /********** SYSTEM MESSAGES, ID > 0x80 **********/
 
