@@ -81,7 +81,9 @@ extern mavlink_message_t *mavlink_get_channel_buffer(uint8_t chan);
 
 // #include <v1.0/common/mavlink.h>
 // include the pixhawk mavlink set, not just the common mavlink set
-#include <v1.0/pixhawk/mavlink.h>
+// #include <v1.0/pixhawk/mavlink.h>
+// now include the jager mavlink set
+#include <v1.0/jager/mavlink.h>
 
 __END_DECLS
 
