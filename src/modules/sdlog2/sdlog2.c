@@ -999,7 +999,9 @@ int sdlog2_thread_main(int argc, char *argv[])
 			struct log_GS1B_s log_GS1B;
 			struct log_TECS_s log_TECS;
 			struct log_WIND_s log_WIND;
-			struct log_AGPS_s log_AGPS;
+			struct log_AGP0_s log_AGP0;
+			struct log_AGP1_s log_AGP1;
+			struct log_AGP2_s log_AGP2;
 			struct log_ASIT_s log_ASIT;
 			struct log_TRAC_s log_TRAC;
 			struct log_APOS_s log_APOS;
@@ -1650,26 +1652,54 @@ int sdlog2_thread_main(int argc, char *argv[])
 		/* --- APNT GPS STATUS --- */
 		if (copy_if_updated(ORB_ID(apnt_gps_status), subs.agps_sub, &buf.apnt_gps_status)) {
 			/* need to write all 3 messages */
+			log_msg.msg_type = LOG_AGP0_MSG;
+			log_msg.body.log_AGP0.gps_time = buf.apnt_gps_status.timestamp;
+			log_msg.body.log_AGP0.lat = buf.apnt_gps_status.lat;
+			log_msg.body.log_AGP0.lon = buf.apnt_gps_status.lon;
+			LOGBUFFER_WRITE_AND_COUNT(AGP0);
+
+			// may need to look at memcpy estimator does and do that (handles putting 0's in case array i
 			log_msg.msg_type = LOG_AGP1_MSG;
-			log_msg.body.log_AGPS.gps_time = buf.apnt_gps_status.timestamp;
-			log_msg.body.log_AGPS.lat = buf.apnt_gps_status.lat;
-			log_msg.body.log_AGPS.lon = buf.apnt_gps_status.lon;
+			memcpy(log_msg.body.log_AGP1.prn, buf.apnt_gps_status.prn, sizeof(log_msg.body.log_AGP1.prn));
+			memcpy(log_msg.body.log_AGP1.azimuth, buf.apnt_gps_status.azimuth, sizeof(log_msg.body.log_AGP1.azimuth));
 			LOGBUFFER_WRITE_AND_COUNT(AGP1);
 
-
-			memcpy(log_msg.body.log_AGPS.prn, buf.apnt_gps_status.prn, sizeof(log_msg.body.log_AGPS.prn));
-			memcpy(log_msg.body.log_AGPS.azimuth, buf.apnt_gps_status.azimuth, sizeof(log_msg.body.log_AGPS.azimuth));
-			memcpy(log_msg.body.log_AGPS.elevation, buf.apnt_gps_status.elevation, sizeof(log_msg.body.log_AGPS.elevation));
-			memcpy(log_msg.body.log_AGPS.snr, buf.apnt_gps_status.snr, sizeof(log_msg.body.log_AGPS.snr));
-			LOGBUFFER_WRITE_AND_COUNT()
+			log_msg.msg_type = LOG_AGP2_MSG;
+			memcpy(log_msg.body.log_AGP2.elevation, buf.apnt_gps_status.elevation, sizeof(log_msg.body.log_AGP2.elevation));
+			memcpy(log_msg.body.log_AGP2.snr, buf.apnt_gps_status.snr, sizeof(log_msg.body.log_AGP2.snr));
+			LOGBUFFER_WRITE_AND_COUNT(AGP2);
 
 		}
 
 		/* --- APNT SITE STATUS --- */
+		if (copy_if_updated(ORB_ID(apnt_site_status), subs.asite_sub, &buf.apnt_site_status)) {
+			log_msg.msg_type = LOG_ASIT_MSG;
+			memcpy(log_msg.body.log_ASIT.id, buf.apnt_site_status.id, sizeof(log_msg.body.log_ASIT.id));
+			memcpy(log_msg.body.log_ASIT.lat, buf.apnt_site_status.lat, sizeof(log_msg.body.log_ASIT.lat));
+			memcpy(log_msg.body.log_ASIT.lon, buf.apnt_site_status.lon, sizeof(log_msg.body.log_ASIT.lon));
+			memcpy(log_msg.body.log_ASIT.signal, buf.apnt_site_status.signal, sizeof(log_msg.body.log_ASIT.signal));
+			LOGBUFFER_WRITE_AND_COUNT(ASIT);
+		}
 
 		/* --- TRACKING STATUS --- */
+		if (copy_if_updated(ORB_ID(tracking_status), subs.track_sub, &buf.tracking_status)) {
+			log_msg.msg_type = LOG_TRAC_MSG;
+			log_msg.body.log_TRAC.time_last_cmd = buf.tracking_status.timestamp_cmd;
+			log_msg.body.log_TRAC.status = buf.tracking_status.status;
+			log_msg.body.log_TRAC.cmd_type = buf.tracking_status.cmd_type;
+			log_msg.body.log_TRAC.cmd_dist = buf.tracking_status.cmd_dist;
+			log_msg.body.log_TRAC.cmd_direction = buf.tracking_status.cmd_direction;
+			LOGBUFFER_WRITE_AND_COUNT(TRAC);
+		}
 
 		/* --- APNT POSITION --- */
+		if (copy_if_updated(ORB_ID(apnt_position), subs.apos_sub, &buf.apnt_position)) {
+			log_msg.msg_type = LOG_APOS_MSG;
+			log_msg.body.log_APOS.position_time = buf.apnt_position.timestamp;
+			log_msg.body.log_APOS.lat = buf.apnt_position.lat;
+			log_msg.body.log_APOS.lon = buf.apnt_position.lon;
+			LOGBUFFER_WRITE_AND_COUNT(APOS);
+		}
 
 		/* signal the other thread new data, but not yet unlock */
 		if (logbuffer_count(&lb) > MIN_BYTES_TO_WRITE) {
