@@ -90,6 +90,11 @@
 #include <uORB/topics/servorail_status.h>
 #include <uORB/topics/wind_estimate.h>
 
+#include <uORB/topics/apnt_gps_status.h>
+#include <uORB/topics/apnt_site_status.h>
+#include <uORB/topics/tracking_status.h>
+#include <uORB/topics/apnt_position.h>
+
 #include <systemlib/systemlib.h>
 #include <systemlib/param/param.h>
 #include <systemlib/perf_counter.h>
@@ -949,6 +954,10 @@ int sdlog2_thread_main(int argc, char *argv[])
 		struct servorail_status_s servorail_status;
 		struct satellite_info_s sat_info;
 		struct wind_estimate_s wind_estimate;
+		struct apnt_gps_status_s apnt_gps_status;
+		struct apnt_site_status_s apnt_site_status;
+		struct tracking_status_s tracking_status;
+		struct apnt_position_s apnt_position;
 	} buf;
 
 	memset(&buf, 0, sizeof(buf));
@@ -990,6 +999,10 @@ int sdlog2_thread_main(int argc, char *argv[])
 			struct log_GS1B_s log_GS1B;
 			struct log_TECS_s log_TECS;
 			struct log_WIND_s log_WIND;
+			struct log_AGPS_s log_AGPS;
+			struct log_ASIT_s log_ASIT;
+			struct log_TRAC_s log_TRAC;
+			struct log_APOS_s log_APOS;
 		} body;
 	} log_msg = {
 		LOG_PACKET_HEADER_INIT(0)
@@ -1026,6 +1039,10 @@ int sdlog2_thread_main(int argc, char *argv[])
 		int system_power_sub;
 		int servorail_status_sub;
 		int wind_sub;
+		int agps_sub;
+		int asite_sub;
+		int track_sub;
+		int apos_sub;
 	} subs;
 
 	subs.cmd_sub = orb_subscribe(ORB_ID(vehicle_command));
@@ -1060,6 +1077,11 @@ int sdlog2_thread_main(int argc, char *argv[])
 	subs.wind_sub = orb_subscribe(ORB_ID(wind_estimate));
 	/* we need to rate-limit wind, as we do not need the full update rate */
 	orb_set_interval(subs.wind_sub, 90);
+
+	subs.agps_sub = orb_subscribe(ORB_ID(apnt_gps_status));
+	subs.asite_sub = orb_subscribe(ORB_ID(apnt_site_status));
+	subs.track_sub = orb_subscribe(ORB_ID(tracking_status));
+	subs.apos_sub = orb_subscribe(ORB_ID(apnt_position));
 
 	thread_running = true;
 
@@ -1624,6 +1646,30 @@ int sdlog2_thread_main(int argc, char *argv[])
 			log_msg.body.log_WIND.cov_y = buf.wind_estimate.covariance_east;
 			LOGBUFFER_WRITE_AND_COUNT(WIND);
 		}
+
+		/* --- APNT GPS STATUS --- */
+		if (copy_if_updated(ORB_ID(apnt_gps_status), subs.agps_sub, &buf.apnt_gps_status)) {
+			/* need to write all 3 messages */
+			log_msg.msg_type = LOG_AGP1_MSG;
+			log_msg.body.log_AGPS.gps_time = buf.apnt_gps_status.timestamp;
+			log_msg.body.log_AGPS.lat = buf.apnt_gps_status.lat;
+			log_msg.body.log_AGPS.lon = buf.apnt_gps_status.lon;
+			LOGBUFFER_WRITE_AND_COUNT(AGP1);
+
+
+			memcpy(log_msg.body.log_AGPS.prn, buf.apnt_gps_status.prn, sizeof(log_msg.body.log_AGPS.prn));
+			memcpy(log_msg.body.log_AGPS.azimuth, buf.apnt_gps_status.azimuth, sizeof(log_msg.body.log_AGPS.azimuth));
+			memcpy(log_msg.body.log_AGPS.elevation, buf.apnt_gps_status.elevation, sizeof(log_msg.body.log_AGPS.elevation));
+			memcpy(log_msg.body.log_AGPS.snr, buf.apnt_gps_status.snr, sizeof(log_msg.body.log_AGPS.snr));
+			LOGBUFFER_WRITE_AND_COUNT()
+
+		}
+
+		/* --- APNT SITE STATUS --- */
+
+		/* --- TRACKING STATUS --- */
+
+		/* --- APNT POSITION --- */
 
 		/* signal the other thread new data, but not yet unlock */
 		if (logbuffer_count(&lb) > MIN_BYTES_TO_WRITE) {

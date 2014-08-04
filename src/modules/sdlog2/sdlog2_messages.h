@@ -393,21 +393,32 @@ struct log_TEL_s {
 	uint64_t heartbeat_time;
 };
 
-/* --- AGPS - APNT GPS STATUS --- */
-#define LOG_AGPS_MSG 38
-struct log_AGPS_s {
+/* need to split gps status message into 3 log messages due to size */
+/* --- AGP0 - APNT GPS STATUS 0 --- */
+#define LOG_AGP0_MSG 64
+struct log_AGP0_s {
 	uint64_t gps_time;
 	float lat;
 	float lon;
 	float alt;
+};
+
+/* --- AGP1 - APNT GPS STATUS 1 --- */
+#define LOG_AGP1_MSG 65
+struct log_AGP1_s {
 	uint8_t prn[8];
 	int16_t azimuth[8];
+};
+
+/* --- AGP2 - APNT GPS STATUS 2 --- */
+#define LOG_AGP2_MSG 66
+struct log_AGP2_s {
 	uint8_t elevation[8];
 	uint8_t snr[8];
 };
 
 /* --- ASIT - APNT SITE STATUS --- */
-#define LOG_ASIT_MSG 39
+#define LOG_ASIT_MSG 67
 struct log_ASIT_s {
 	uint32_t id[4];
 	float lat[4];
@@ -417,7 +428,7 @@ struct log_ASIT_s {
 
 
 /* --- TRAC - TRACKING STATUS --- */
-#define LOG_TRAC_MSG 40
+#define LOG_TRAC_MSG 68
 struct log_TRAC_s {
 	uint64_t time_last_cmd;
 	uint8_t status;
@@ -428,7 +439,7 @@ struct log_TRAC_s {
 
 
 /* --- APOS - APNT POSITION --- */
-#define LOG_APOS_MSG 41
+#define LOG_APOS_MSG 69
 struct log_APOS_s {
 	uint64_t position_time;
 	float lat;
@@ -499,6 +510,13 @@ static const struct log_format_s log_formats[] = {
 	LOG_FORMAT(GS1B, "BBBBBBBBBBBBBBBB",	"s0,s1,s2,s3,s4,s5,s6,s7,s8,s9,s10,s11,s12,s13,s14,s15"),
 	LOG_FORMAT(TECS, "fffffffffffffffB",	"ASP,A,AF,FSP,F,FF,AsSP,As,AsF,AsDSP,AsD,TERSP,TER,EDRSP,EDR,M"),
 	LOG_FORMAT(WIND, "ffff",	"X,Y,CovX,CovY"),
+	LOG_FORMAT(AGP0, "Qfff",	"aGPSTime,aGPSLat,aGPSLon,aGPSAlt"),
+	LOG_FORMAT(AGP1, "BBBBBBBBhhhhhhhh",	"p0,p1,p2,p3,p4,p5,p6,p7,az0,az1,az2,az3,az4,az5,az6,az7"),
+	LOG_FORMAT(AGP2, "BBBBBBBBBBBBBBBB", 	"el0,el1,el2,el3,el4,el5,el6,el7,s0,s1,s2,s3,s4,s5,s6,s7"),
+	LOG_FORMAT(ASIT, "IIIIffffffffHHHH", 	"id0,id1,id2,id3,la0,la1,la2,la3,lo0,lo1,lo2,lo3,si0,si1,si2,si3"),
+	LOG_FORMAT(TRAC, "QBBfB", 	"LastCmd,Status,CmdType,CmdDist,CmdDir"),
+	LOG_FORMAT(APOS, "QFF", "ApntTime,ApntLat,ApntLon"),
+
 
 	/* system-level messages, ID >= 0x80 */
 	/* FMT: don't write format of format message, it's useless */
