@@ -87,7 +87,10 @@ enum VEHICLE_CMD {
 	VEHICLE_CMD_MISSION_START = 300, /* start running a mission |first_item: the first mission item to run| last_item:  the last mission item to run (after this item is run, the mission ends)|  */
 	VEHICLE_CMD_COMPONENT_ARM_DISARM = 400, /* Arms / Disarms a component |1 to arm, 0 to disarm|  */
 	VEHICLE_CMD_START_RX_PAIR = 500, /* Starts receiver pairing |0:Spektrum| 0:Spektrum DSM2, 1:Spektrum DSMX|  */
-	VEHICLE_CMD_ENUM_END = 501, /*  | */
+	VEHICLE_CMD_TRACK_GOTO = 10010,
+	VEHICLE_CMD_TRACK_ROTATE = 10011,
+	VEHICLE_CMD_ENUM_END = 10012, // 501, /*  | */
+
 };
 
 /**
