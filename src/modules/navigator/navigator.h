@@ -63,7 +63,7 @@
  * Number of navigation modes that need on_active/on_inactive calls
  * Currently: mission, loiter, and rtl
  */
-#define NAVIGATOR_MODE_ARRAY_SIZE 4
+#define NAVIGATOR_MODE_ARRAY_SIZE 5
 
 class Navigator : public control::SuperBlock
 {
@@ -139,6 +139,7 @@ private:
 	int		_onboard_mission_sub;		/**< onboard mission subscription */
 	int		_offboard_mission_sub;		/**< offboard mission subscription */
 	int		_param_update_sub;		/**< param update subscription */
+	int		_hunt_mission_sub;		/**< hunt mission subscription */
 
 	orb_advert_t	_pos_sp_triplet_pub;		/**< publish position setpoint triplet */
 
@@ -165,6 +166,7 @@ private:
 	Loiter		_loiter;			/**< class that handles loiter */
 	RTL 		_rtl;				/**< class that handles RTL */
 	Offboard	_offboard;			/**< class that handles offboard */
+	Hunt 		_hunt;
 
 	NavigatorMode *_navigation_mode_array[NAVIGATOR_MODE_ARRAY_SIZE];	/**< array of navigation modes */
 

@@ -106,6 +106,7 @@ Navigator::Navigator() :
 	_onboard_mission_sub(-1),
 	_offboard_mission_sub(-1),
 	_param_update_sub(-1),
+	_hunt_mission_sub(-1),
 	_pos_sp_triplet_pub(-1),
 	_vstatus{},
 	_control_mode{},
@@ -125,6 +126,7 @@ Navigator::Navigator() :
 	_loiter(this, "LOI"),
 	_rtl(this, "RTL"),
 	_offboard(this, "OFF"),
+	_hunt(this, "HUN"),
 	_can_loiter_at_sp(false),
 	_pos_sp_triplet_updated(false),
 	_param_loiter_radius(this, "LOITER_RAD"),
@@ -135,6 +137,7 @@ Navigator::Navigator() :
 	_navigation_mode_array[1] = &_loiter;
 	_navigation_mode_array[2] = &_rtl;
 	_navigation_mode_array[3] = &_offboard;
+	_navigation_mode_array[4] = &_hunt;
 
 	updateParams();
 }
@@ -248,6 +251,7 @@ Navigator::task_main()
 	_offboard_mission_sub = orb_subscribe(ORB_ID(offboard_mission));
 	_param_update_sub = orb_subscribe(ORB_ID(parameter_update));
 	_offboard_control_sp_sub = orb_subscribe(ORB_ID(offboard_control_setpoint));
+	_hunt_mission_sub = orb_subscribe(ORB_ID(tracking_cmd)); // subscription to tracking commands
 
 	/* copy all topics first time */
 	vehicle_status_update();
@@ -335,6 +339,8 @@ Navigator::task_main()
 
 			/* Check geofence violation */
 			if (!_geofence.inside(&_global_pos)) {
+
+				// XXX: change this to a return to launch!!
 
 				/* Issue a warning about the geofence violation once */
 				if (!_geofence_violation_warning_sent) {
