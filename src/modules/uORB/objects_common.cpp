@@ -233,3 +233,6 @@ ORB_DEFINE(tracking_status, struct tracking_status_s);
 
 #include "topics/apnt_position.h"
 ORB_DEFINE(apnt_position, struct apnt_position_s);
+
+#include "topics/tracking_cmd.h"
+ORB_DEFINE(tracking_cmd, struct tracking_cmd_s);
