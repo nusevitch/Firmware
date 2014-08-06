@@ -68,6 +68,7 @@
 #include <uORB/topics/fence.h>
 #include <uORB/topics/navigation_capabilities.h>
 #include <uORB/topics/offboard_control_setpoint.h>
+#include <uORB/topics/tracking_cmd.h>
 
 #include <systemlib/err.h>
 #include <systemlib/systemlib.h>

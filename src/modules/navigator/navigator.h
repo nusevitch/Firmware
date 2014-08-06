@@ -57,6 +57,7 @@
 #include "loiter.h"
 #include "rtl.h"
 #include "offboard.h"
+#include "hunt.h"
 #include "geofence.h"
 
 /**
@@ -117,6 +118,7 @@ public:
 	int		get_onboard_mission_sub() { return _onboard_mission_sub; }
 	int		get_offboard_mission_sub() { return _offboard_mission_sub; }
 	int		get_offboard_control_sp_sub() { return _offboard_control_sp_sub; }
+	int		get_hunt_mission_sub() {return _hunt_mission_sub; }
 	Geofence&	get_geofence() { return _geofence; }
 	bool		get_can_loiter_at_sp() { return _can_loiter_at_sp; }
 	float		get_loiter_radius() { return _param_loiter_radius.get(); }
