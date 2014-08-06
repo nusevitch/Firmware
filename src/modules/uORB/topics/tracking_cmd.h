@@ -11,6 +11,12 @@
 #include <stdint.h>
 #include "../uORB.h"
 
+enum TRAC_CMD {
+	TRACKING_CMD_MOVE = 0,
+	TRACKING_CMD_ROTATE
+};
+
+
 struct tracking_cmd_s {
 	uint8_t cmd_type;
 	uint8_t parami_1;
