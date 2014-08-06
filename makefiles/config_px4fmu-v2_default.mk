@@ -132,7 +132,7 @@ MODULES		+= lib/launchdetection
 #MODULES		+= examples/math_demo
 # Tutorial code from
 # https://pixhawk.ethz.ch/px4/dev/hello_sky
-MODULES		+= examples/px4_simple_app
+# MODULES		+= examples/px4_simple_app
 
 # Tutorial code from
 # https://pixhawk.ethz.ch/px4/dev/daemon
@@ -151,7 +151,7 @@ MODULES		+= examples/px4_simple_app
 
 #
 # APNT test module
-MODULES += modules/everything_is_awesome
+# MODULES += modules/everything_is_awesome
 
 #
 # Transitional support - add commands from the NuttX export archive.
