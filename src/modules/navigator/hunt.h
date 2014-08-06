@@ -16,6 +16,7 @@
 #include <uORB/topics/mission.h>
 #include <uORB/topics/home_position.h>
 #include <uORB/topics/vehicle_global_position.h>
+#include <uORB/topics/tracking_cmd.h>
 
 #include "navigator_mode.h"
 #include "mission_block.h"
@@ -23,7 +24,7 @@
 
 class Navigator;
 
-class Hunt : public NavigatorMode
+class Hunt : public MissionBlock
 {
 public:
 	Hunt(Navigator *navigator, const char *name);
@@ -66,6 +67,8 @@ private:
 	 * will just change the behavior of vehicle when coming from off state
 	 */
 	bool _started;
+
+	struct tracking_cmd_s _tracking_cmd;
 
 
 };
