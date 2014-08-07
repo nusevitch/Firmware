@@ -22,8 +22,10 @@ enum HUNT_CMD {
 
 struct tracking_cmd_s {
 	uint8_t cmd_type; 	/**< type of command */
-	float paramf_1;		/**< north distance or angle or rotation, depending on command type */
-	float paramf_2;		/**<east distance */
+	uint8_t cmd_id;		/**< id of the command, an incremental number sent from tracking (mainly for double checking */
+	double paramf_1;		/**< north distance or angle or rotation, depending on command type */
+	double paramf_2;		/**< east distance */
+	float paramf_3;		/**< a third parameter, possible desired yaw to maintain during flight... */
 	float altitude;
 };
 
