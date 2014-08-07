@@ -2,7 +2,10 @@
  * hunt.cpp
  *
  *  Created on: Aug 5, 2014
- *      Author: adrienp
+ *      Author: Adrien Perkins <adrienp@stanford.edu>
+ *
+ *      Navigation mode for hunting down signal
+ *      allows for executing navigation commands generated from offboard in real time
  */
 
 #include <string.h>
@@ -20,12 +23,11 @@
 #include "hunt.h"
 
 Hunt::Hunt(Navigator *navigator, const char *name) :
-	NavigatorMode(navigator, name)
+	MissionBlock(navigator, name),
+	_hunt_state(HUNT_STATE_OFF),
+	_started(false),
+	_tracking_cmd({0})
 {
-	/* just initializing some needed variables */
-	_started = false;
-	_hunt_state(HUNT_STATE_OFF);
-
 	/* load initial params */
 	updateParams();
 
@@ -47,7 +49,7 @@ Hunt::on_inactive()
 	// maybe need to think about doing a suspended mode instead of off
 	// would make the _started parameter not needed?
 	/* put the hunt into off mode */
-	_hunt_state(HUNT_STATE_OFF);
+	_hunt_state = HUNT_STATE_OFF;
 }
 
 void
@@ -60,7 +62,7 @@ Hunt::on_activation()
 
 		// set the state to moving to first position
 		// XXX: maybe don't need state start, and just set it to state move here
-		_hunt_state(HUNT_STATE_START);
+		_hunt_state = HUNT_STATE_START;
 	} else {
 		// need to check if we are at the last location
 		// if not at the last commanded location, go to last commanded location
@@ -80,19 +82,43 @@ Hunt::on_active()
 	// XXX: not sure if or or and is best here, depends on when hunt state is
 	// changed to wait
 	if (_hunt_state == HUNT_STATE_WAIT || is_mission_item_reached()) {
+		// we have reached the desired point or are waiting
 
+		if (get_next_cmd()) {
+			// new command has come from tracking
+			set_next_item();
 
+			// set next item will handle the state change to a none wait state
+		} else {
+
+			// if we were not in a waiting state, need to go into a waiting state
+			// and need to tell the vehicle to loiter here (I think)
+			if (_hunt_state != HUNT_STATE_WAIT) {
+				// change our state to waiting
+				_hunt_state = HUNT_STATE_WAIT;
+
+				// put the vehicle into a waiting mode
+				set_waiting();
+			}
+		}
 	}
 
+	// XXX: IMPORTANT
+	// TODO: figure out how to broadcast done with the command
 
 }
 
 bool
-Hunt::get_next_item()
+Hunt::get_next_cmd()
 {
+	bool updated = false;
+	orb_check(_navigator->get_hunt_mission_sub(), &updated);
 
-
-
+	if (updated) {
+		// copy over the command
+		orb_copy(ORB_ID(tracking_cmd), _navigator->get_hunt_mission_sub(), &_tracking_cmd);
+		return true;
+	}
 
 	return false;
 }
@@ -100,9 +126,120 @@ Hunt::get_next_item()
 void
 Hunt::set_next_item()
 {
+	/* get pointer to the position setpoint from the navigator */
+	struct position_setpoint_triplet_s *pos_sp_triplet = _navigator->get_position_setpoint_triplet();
 
+	/* make sure we have the latest params */
+	updateParams();
+
+	/* just copy over what is the current setpoint to the previous one, since we will be setting a new current setpoint */
+	set_previous_pos_setpoint();
+
+	// not sure about this
+	// XXX: figure out difference between can loiter at sp and can't loiter
+	// who looks at this... (will be setting it as true... others have it as false...)
+	_navigator->set_can_loiter_at_sp(true);
+
+	double northDist = 0.0;
+	double eastDist = 0.0;
+
+	// XXX: IMPORTANT
+	// TODO: should do a distance to home check on this to make sure we are not commanded to go insanely far
+
+	// create a mission item from the tracking cmd
+	switch (_tracking_cmd.cmd_type) {
+	case HUNT_CMD_MOVE: {
+
+		/* get desired north and east distances of travel */
+		northDist = _tracking_cmd.paramf_1; // not south is just a negative north distance
+		eastDist = _tracking_cmd.paramf_2;
+
+		// compute and set the desired latitude and longitude from
+		// the desired travel distances
+		// XXX: east might be backwards...
+		_mission_item.lat = _navigator->get_global_position()->lat + M_RAD_TO_DEG*(northDist/6378137.0);
+		_mission_item.lon = _navigator->get_global_position()->lon + M_RAD_TO_DEG*(eastDist/6378137.0)/cos(_navigator->get_global_position()->lat);
+
+		// TODO: maybe change the desired yaw to be in the direction assumed of the jammer
+		_mission_item.yaw = 0.0; // want to keep facing north during moves so that when a rotation is called, we know we are starting from north
+
+		// change the hunt state to move
+		_hunt_state = HUNT_STATE_MOVE;
+
+
+		break;
+	}
+	case HUNT_CMD_ROTATE: {
+		// TODO: implement ability to rotate
+
+		// change the hunt state to rotate
+		_hunt_state = HUNT_STATE_ROTATE;
+
+
+		break;
+	}
+	default:
+		break;
+
+	}
+
+	// setting the altitude of the mission item will be the same regardless of cmd type
+	_mission_item.altitude_is_relative = false;
+	_mission_item.altitude = _tracking_cmd.altitude;
+
+	// loiter radius and direction will be same, regardless of cmd type
+	_mission_item.loiter_radius = _navigator->get_loiter_radius();
+	_mission_item.loiter_direction = 1;
+
+	// nav cmd will be waypoint regardless of cmd type
+	_mission_item.nav_cmd = NAV_CMD_WAYPOINT;
+
+	// all other odds and ends of mission item will be the same regardless of cmd type
+	_mission_item.acceptance_radius = _navigator->get_acceptance_radius();
+	_mission_item.time_inside = 0.0f;
+	_mission_item.pitch_min = 0.0f;
+	_mission_item.autocontinue = true;
+	_mission_item.origin = ORIGIN_TRACKING;
+
+
+	// need to reset the mission item reached info
+	reset_mission_item_reached();
+
+	/* convert mission item to current position setpoint and make it valid */
+	mission_item_to_position_setpoint(&_mission_item, &pos_sp_triplet->current);
+	pos_sp_triplet->next.valid = false;
+
+	_navigator->set_position_setpoint_triplet_updated();
 }
 
+
+void
+Hunt::set_waiting()
+{
+
+	/* get pointer to the position setpoint from the navigator */
+	struct position_setpoint_triplet_s *pos_sp_triplet = _navigator->get_position_setpoint_triplet();
+
+	/* make sure we have the latest params */
+	updateParams();
+
+	/* just copy over what is the current setpoint to the previous one, since we will be setting a new current setpoint */
+	set_previous_pos_setpoint();
+
+	/* set loiter mission item */
+	set_loiter_item(&_mission_item);
+
+	/* update position setpoint triplet  */
+	mission_item_to_position_setpoint(&_mission_item, &pos_sp_triplet->current);
+	pos_sp_triplet->next.valid = false;
+
+	// _navigator->set_can_loiter_at_sp(pos_sp_triplet->current.type == SETPOINT_TYPE_LOITER); // this is what mission does
+
+	// XXX: really not sure...
+	_navigator->set_can_loiter_at_sp(true);
+
+	_navigator->set_position_setpoint_triplet_updated();
+}
 
 
 

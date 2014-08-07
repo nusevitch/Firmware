@@ -41,13 +41,18 @@ private:
 	/**
 	 * get the next command from tracking via mavlink
 	 */
-	bool get_next_item();
+	bool get_next_cmd();
 
 	/**
 	 * once the next item has been received,
 	 * actually set it as a mission item and setpoint
 	 */
 	void set_next_item();
+
+	/*
+	 * put the vehicle in a loiter mode as we wait for tracking to respond
+	 */
+	void set_waiting();
 
 	/**
 	 * states that the hunt script can be in
