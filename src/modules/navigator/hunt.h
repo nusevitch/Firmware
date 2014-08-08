@@ -54,6 +54,21 @@ private:
 	 */
 	void set_waiting();
 
+	/*
+	 * update mission result to say that the most recent command has been confirmed finished
+	 */
+	void report_cmd_finished();
+
+	/*
+	 * update the current cmd id being flown
+	 */
+	void report_cmd_id();
+
+	/*
+	 * publish the mission result (which should get picked up by mavlink module to be sent to ground)
+	 */
+	void publish_mission_result();
+
 	/**
 	 * states that the hunt script can be in
 	 * will be used to help identify whether we
@@ -72,8 +87,12 @@ private:
 	 * will just change the behavior of vehicle when coming from off state
 	 */
 	bool _started;
+	int _current_cmd_id;
 
 	struct tracking_cmd_s _tracking_cmd;
+
+	orb_advert_t _mission_result_pub;
+	struct mission_result_s _mission_result;
 
 
 };

@@ -26,7 +26,10 @@ Hunt::Hunt(Navigator *navigator, const char *name) :
 	MissionBlock(navigator, name),
 	_hunt_state(HUNT_STATE_OFF),
 	_started(false),
-	_tracking_cmd({0})
+	_current_cmd_id(-1),
+	_tracking_cmd({0}),
+	_mission_result_pub(-1),
+	_mission_result({0})
 {
 	/* load initial params */
 	updateParams();
@@ -129,19 +132,22 @@ Hunt::set_next_item()
 	/* get pointer to the position setpoint from the navigator */
 	struct position_setpoint_triplet_s *pos_sp_triplet = _navigator->get_position_setpoint_triplet();
 
+	double northDist = 0.0;
+	double eastDist = 0.0;
+
 	/* make sure we have the latest params */
 	updateParams();
 
 	/* just copy over what is the current setpoint to the previous one, since we will be setting a new current setpoint */
 	set_previous_pos_setpoint();
 
+	// update the current cmd id to be that of the new cmd
+	_current_cmd_id = _tracking_cmd.cmd_id;
+
 	// not sure about this
 	// XXX: figure out difference between can loiter at sp and can't loiter
 	// who looks at this... (will be setting it as true... others have it as false...)
 	_navigator->set_can_loiter_at_sp(true);
-
-	double northDist = 0.0;
-	double eastDist = 0.0;
 
 	// XXX: IMPORTANT
 	// TODO: should do a distance to home check on this to make sure we are not commanded to go insanely far
@@ -151,8 +157,8 @@ Hunt::set_next_item()
 	case HUNT_CMD_MOVE: {
 
 		/* get desired north and east distances of travel */
-		northDist = _tracking_cmd.paramf_1; // not south is just a negative north distance
-		eastDist = _tracking_cmd.paramf_2;
+		northDist = _tracking_cmd.north; // not south is just a negative north distance
+		eastDist = _tracking_cmd.east;
 
 		// compute and set the desired latitude and longitude from
 		// the desired travel distances
@@ -239,6 +245,40 @@ Hunt::set_waiting()
 	_navigator->set_can_loiter_at_sp(true);
 
 	_navigator->set_position_setpoint_triplet_updated();
+}
+
+void
+Hunt::report_cmd_finished()
+{
+	_mission_result.reached = true;
+	_mission_result.seq_reached = _current_cmd_id;
+
+	publish_mission_result();
+}
+
+void
+Hunt::report_cmd_id()
+{
+	_mission_result.seq_current = _current_cmd_id;
+	publish_mission_result();
+}
+
+
+void
+Hunt::publish_mission_result()
+{
+	/* lazily publish the mission result only once available */
+	if (_mission_result_pub > 0) {
+		/* publish mission result */
+		orb_publish(ORB_ID(mission_result), _mission_result_pub, &_mission_result);
+	} else {
+		/* advertise and publish */
+		_mission_result_pub = orb_advertise(ORB_ID(mission_result), &_mission_result);
+	}
+
+	/* reset reached bool */
+	_mission_result.reached = false;
+	_mission_result.finished = false;
 }
 
 
