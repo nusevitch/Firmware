@@ -114,6 +114,7 @@ MavlinkReceiver::MavlinkReceiver(Mavlink *parent) :
 	_apnt_gps_status_pub(-1),
 	_apnt_site_status_pub(-1),
 	_tracking_status_pub(-1),
+	_tracking_cmd_pub(-1),
 	_apnt_position_pub(-1),
 	_radio_status_available(false),
 	_control_mode_sub(orb_subscribe(ORB_ID(vehicle_control_mode))),
@@ -187,6 +188,9 @@ MavlinkReceiver::handle_message(mavlink_message_t *msg)
 		break;
 	case MAVLINK_MSG_ID_APNT_POSITION:
 		handle_message_apnt_position(msg);
+		break;
+	case MAVLINK_MSG_ID_TRACKING_CMD:
+		handle_message_tracking_cmd(msg);
 		break;
 
 	default:
@@ -950,7 +954,7 @@ MavlinkReceiver::handle_message_apnt_gps_status(mavlink_message_t *msg) {
 
 	for (int i = 0; i < 8; i++) {
 		gps_stat_s.prn[i] = ag_status.prn[i];
-		gps_stat_s.azimuth[i] = ag_status.azimth[i];
+		gps_stat_s.azimuth[i] = ag_status.azimuth[i];
 		gps_stat_s.elevation[i] = ag_status.elevation[i];
 		gps_stat_s.snr[i] = ag_status.snr[i];
 	}
@@ -1001,13 +1005,9 @@ MavlinkReceiver::handle_message_tracking_status(mavlink_message_t *msg) {
 	struct tracking_status_s tracking_stat_s;
 	memset(&tracking_stat_s, 0, sizeof(tracking_stat_s));
 
-	tracking_stat_s.timestamp_status = hrt_absolute_time();
-	tracking_stat_s.timestamp_cmd = hrt_absolute_time();
-	tracking_stat_s.status = t_status.status;
-	tracking_stat_s.cmd_type = t_status.cmd_type;
-	tracking_stat_s.cmd_dist = t_status.cmd_dist;
-	tracking_stat_s.cmd_direction = t_status.cmd_direction;
-
+	tracking_stat_s.timestamp = hrt_absolute_time();
+	tracking_stat_s.computer_status = t_status.computer_status;
+	tracking_stat_s.hunt_mode_state = t_status.hunt_mode_state;
 
 	if (_tracking_status_pub < 0) {
 		_tracking_status_pub = orb_advertise(ORB_ID(tracking_status), &tracking_stat_s);
@@ -1036,6 +1036,27 @@ MavlinkReceiver::handle_message_apnt_position(mavlink_message_t *msg) {
 	}
 }
 
+void
+MavlinkReceiver::handle_message_tracking_cmd(mavlink_message_t *msg) {
+	mavlink_tracking_cmd_t cmd;
+	mavlink_msg_tracking_cmd_decode(msg, &cmd);
+
+	struct tracking_cmd_s track_cmd_s;
+	memset(&track_cmd_s, 0, sizeof(track_cmd_s));
+
+	track_cmd_s.cmd_id = cmd.cmd_id;
+	track_cmd_s.cmd_type = cmd.cmd_type;
+	track_cmd_s.north = cmd.north;
+	track_cmd_s.east = cmd.east;
+	track_cmd_s.yaw_angle = cmd.yaw_angle;
+	track_cmd_s.altitude = cmd.altitude;
+
+	if (_tracking_cmd_pub < 0) {
+		_tracking_cmd_pub = orb_advertise(ORB_ID(tracking_cmd), &track_cmd_s);
+	} else {
+		orb_publish(ORB_ID(tracking_cmd), _tracking_cmd_pub, &track_cmd_s);
+	}
+}
 
 
 /**
