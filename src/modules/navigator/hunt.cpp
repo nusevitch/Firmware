@@ -154,7 +154,7 @@ Hunt::set_next_item()
 
 	// create a mission item from the tracking cmd
 	switch (_tracking_cmd.cmd_type) {
-	case HUNT_CMD_MOVE: {
+	case HUNT_CMD_TRAVEL: {
 
 		/* get desired north and east distances of travel */
 		northDist = _tracking_cmd.north; // not south is just a negative north distance
