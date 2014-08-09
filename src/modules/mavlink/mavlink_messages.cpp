@@ -2066,8 +2066,8 @@ protected:
 		struct tracking_status_s status;
 
 		if (tracking_sub->update(&time, &status)) {
-			mavlink_msg_tracking_status_send(_channel, status.timestamp_status, status.timestamp_cmd,
-					status.status, status.cmd_type,	status.cmd_dist, status.cmd_direction);
+			mavlink_msg_tracking_status_send(_channel, status.timestamp,
+					status.computer_status, status.hunt_mode_state);
 		}
 	}
 };
