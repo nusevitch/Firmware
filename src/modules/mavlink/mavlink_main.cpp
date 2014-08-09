@@ -1473,6 +1473,7 @@ Mavlink::task_main(int argc, char *argv[])
 		configure_stream("APNT_GPS_STATUS", 1.0f);
 		configure_stream("APNT_SITE_STATUS", 1.0f);
 		configure_stream("TRACKING_STATUS", 1.0f);
+		configure_stream("TRACKING_CMD", 1.0f);
 		configure_stream("APNT_POSITION", 1.0f);
 		break;
 
