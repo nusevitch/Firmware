@@ -72,6 +72,7 @@
 #include <uORB/topics/apnt_gps_status.h>
 #include <uORB/topics/apnt_site_status.h>
 #include <uORB/topics/tracking_status.h>
+#include <uORB/topics/tracking_cmd.h>
 #include <uORB/topics/apnt_position.h>
 #include <drivers/drv_rc_input.h>
 #include <drivers/drv_pwm_output.h>
@@ -2072,6 +2073,62 @@ protected:
 	}
 };
 
+class MavlinkStreamTrackingCmd : public MavlinkStream
+{
+public:
+	const char *get_name() const
+	{
+		return MavlinkStreamTrackingCmd::get_name_static();
+	}
+
+	static const char *get_name_static()
+	{
+		return "TRACKING_CMD";
+	}
+
+	uint8_t get_id()
+	{
+		return MAVLINK_MSG_ID_TRACKING_CMD;
+	}
+
+	static MavlinkStream *new_instance()
+	{
+		return new MavlinkStreamTrackingCmd();
+	}
+
+private:
+	MavlinkOrbSubscription *tracking_cmd_sub;
+	uint64_t time;
+
+	/* do not allow top copying this class */
+	MavlinkStreamTrackingCmd(MavlinkStreamTrackingCmd &);
+	MavlinkStreamTrackingCmd& operator = (const MavlinkStreamTrackingCmd &);
+
+protected:
+	explicit MavlinkStreamTrackingCmd() : MavlinkStream(),
+		tracking_cmd_sub(nullptr),
+		time(0)
+	{}
+
+	void subscribe(Mavlink *mavlink)
+	{
+		tracking_cmd_sub = mavlink->add_orb_subscription(ORB_ID(tracking_cmd));
+	}
+
+	void send(const hrt_abstime t)
+	{
+		struct tracking_cmd_s cmd;
+
+		if (tracking_cmd_sub->update(&time, &cmd)) {
+			mavlink_msg_tracking_cmd_send(_channel, cmd.timestamp, cmd.cmd_id, cmd.cmd_type, cmd.north, cmd.east,
+					cmd.yaw_angle, cmd.altitude);
+		}
+	}
+};
+
+
+
+
 class MavlinkStreamApntPosition : public MavlinkStream
 {
 public:
@@ -2156,6 +2213,7 @@ StreamListItem *streams_list[] = {
 	new StreamListItem(&MavlinkStreamApntGPSStatus::new_instance, &MavlinkStreamApntGPSStatus::get_name_static),
 	new StreamListItem(&MavlinkStreamApntSiteStatus::new_instance, &MavlinkStreamApntSiteStatus::get_name_static),
 	new StreamListItem(&MavlinkStreamTrackingStatus::new_instance, &MavlinkStreamTrackingStatus::get_name_static),
+	new StreamListItem(&MavlinkStreamTrackingCmd::new_instance, &MavlinkStreamTrackingCmd::get_name_static),
 	new StreamListItem(&MavlinkStreamApntPosition::new_instance, &MavlinkStreamApntPosition::get_name_static),
 	nullptr
 };

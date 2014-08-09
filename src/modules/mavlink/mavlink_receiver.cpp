@@ -1044,6 +1044,7 @@ MavlinkReceiver::handle_message_tracking_cmd(mavlink_message_t *msg) {
 	struct tracking_cmd_s track_cmd_s;
 	memset(&track_cmd_s, 0, sizeof(track_cmd_s));
 
+	track_cmd_s.timestamp = hrt_absolute_time();
 	track_cmd_s.cmd_id = cmd.cmd_id;
 	track_cmd_s.cmd_type = cmd.cmd_type;
 	track_cmd_s.north = cmd.north;
