@@ -430,11 +430,19 @@ struct log_ASIT_s {
 /* --- TRAC - TRACKING STATUS --- */
 #define LOG_TRAC_MSG 68
 struct log_TRAC_s {
-	uint64_t time_last_cmd;
-	uint8_t status;
+	uint8_t computer_status;
+	uint8_t hunt_state;
+};
+
+/* --- TCMD - TRACKING CMD --- */
+#define LOG_TCMD_MSG 69
+struct log_TCMD_s {
+	uint8_t cmd_id;
 	uint8_t cmd_type;
-	float cmd_dist;
-	uint8_t cmd_direction;
+	double north;
+	double east;
+	float yaw_angle;
+	float altitude;
 };
 
 
@@ -515,6 +523,7 @@ static const struct log_format_s log_formats[] = {
 	LOG_FORMAT(AGP2, "BBBBBBBBBBBBBBBB", 	"el0,el1,el2,el3,el4,el5,el6,el7,s0,s1,s2,s3,s4,s5,s6,s7"),
 	LOG_FORMAT(ASIT, "IIIIffffffffHHHH", 	"id0,id1,id2,id3,la0,la1,la2,la3,lo0,lo1,lo2,lo3,si0,si1,si2,si3"),
 	LOG_FORMAT(TRAC, "QBBfB", 	"LastCmd,Status,CmdType,CmdDist,CmdDir"),
+	LOG_FORMAT(TCMD, "BBffff", "CmdId,CmdType,North,East,Yaw,Alt"),
 	LOG_FORMAT(APOS, "QFF", "ApntTime,ApntLat,ApntLon"),
 
 

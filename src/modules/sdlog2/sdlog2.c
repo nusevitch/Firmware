@@ -93,6 +93,7 @@
 #include <uORB/topics/apnt_gps_status.h>
 #include <uORB/topics/apnt_site_status.h>
 #include <uORB/topics/tracking_status.h>
+#include <uORB/topics/tracking_cmd.h>
 #include <uORB/topics/apnt_position.h>
 
 #include <systemlib/systemlib.h>
@@ -957,6 +958,7 @@ int sdlog2_thread_main(int argc, char *argv[])
 		struct apnt_gps_status_s apnt_gps_status;
 		struct apnt_site_status_s apnt_site_status;
 		struct tracking_status_s tracking_status;
+		struct tracking_cmd_s tracking_cmd;
 		struct apnt_position_s apnt_position;
 	} buf;
 
@@ -1004,6 +1006,7 @@ int sdlog2_thread_main(int argc, char *argv[])
 			struct log_AGP2_s log_AGP2;
 			struct log_ASIT_s log_ASIT;
 			struct log_TRAC_s log_TRAC;
+			struct log_TCMD_s log_TCMD;
 			struct log_APOS_s log_APOS;
 		} body;
 	} log_msg = {
@@ -1044,6 +1047,7 @@ int sdlog2_thread_main(int argc, char *argv[])
 		int agps_sub;
 		int asite_sub;
 		int track_sub;
+		int tcmd_sub;
 		int apos_sub;
 	} subs;
 
@@ -1083,6 +1087,7 @@ int sdlog2_thread_main(int argc, char *argv[])
 	subs.agps_sub = orb_subscribe(ORB_ID(apnt_gps_status));
 	subs.asite_sub = orb_subscribe(ORB_ID(apnt_site_status));
 	subs.track_sub = orb_subscribe(ORB_ID(tracking_status));
+	subs.tcmd_sub = orb_subscribe(ORB_ID(tracking_cmd));
 	subs.apos_sub = orb_subscribe(ORB_ID(apnt_position));
 
 	thread_running = true;
@@ -1684,12 +1689,21 @@ int sdlog2_thread_main(int argc, char *argv[])
 		/* --- TRACKING STATUS --- */
 		if (copy_if_updated(ORB_ID(tracking_status), subs.track_sub, &buf.tracking_status)) {
 			log_msg.msg_type = LOG_TRAC_MSG;
-			log_msg.body.log_TRAC.time_last_cmd = buf.tracking_status.timestamp_cmd;
-			log_msg.body.log_TRAC.status = buf.tracking_status.status;
-			log_msg.body.log_TRAC.cmd_type = buf.tracking_status.cmd_type;
-			log_msg.body.log_TRAC.cmd_dist = buf.tracking_status.cmd_dist;
-			log_msg.body.log_TRAC.cmd_direction = buf.tracking_status.cmd_direction;
+			log_msg.body.log_TRAC.computer_status = buf.tracking_status.computer_status;
+			log_msg.body.log_TRAC.hunt_state = buf.tracking_status.hunt_mode_state;
 			LOGBUFFER_WRITE_AND_COUNT(TRAC);
+		}
+
+		/* --- TRACKING STATUS --- */
+		if (copy_if_updated(ORB_ID(tracking_cmd), subs.tcmd_sub, &buf.tracking_cmd)) {
+			log_msg.msg_type = LOG_TCMD_MSG;
+			log_msg.body.log_TCMD.cmd_id = buf.tracking_cmd.cmd_id;
+			log_msg.body.log_TCMD.cmd_type = buf.tracking_cmd.cmd_type;
+			log_msg.body.log_TCMD.north = buf.tracking_cmd.north;
+			log_msg.body.log_TCMD.east = buf.tracking_cmd.east;
+			log_msg.body.log_TCMD.yaw_angle = buf.tracking_cmd.yaw_angle;
+			log_msg.body.log_TCMD.altitude = buf.tracking_cmd.altitude;
+			LOGBUFFER_WRITE_AND_COUNT(TCMD);
 		}
 
 		/* --- APNT POSITION --- */
