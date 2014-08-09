@@ -11,14 +11,27 @@
 #include <stdint.h>
 #include "../uORB.h"
 
-struct tracking_status_s {
-	uint64_t timestamp_status;
-	uint64_t timestamp_cmd;
+enum COMPUTER_STATUS {
+	TRACKING_COMPUTER_UNKNOWN = 0,
+	TRACKING_COMPUTER_STANDBY,
+	TRACKING_COMPUTER_HUNT,
+	TRACKING_COMPUTER_DONE
+};
 
-	uint8_t status;
-	uint8_t cmd_type;
-	float cmd_dist;
-	uint8_t cmd_direction;
+enum HUNT_STATE {
+	HUNT_STATE_OFF = 0,		// hunt has been turned off
+	HUNT_STATE_START,		// hunt just started, need to go to starting position
+	HUNT_STATE_WAIT,		// waiting for next command from tracking
+	HUNT_STATE_MOVE,		// executing a move command from tracking
+	HUNT_STATE_ROTATE,		// executing a rotate command from tracking
+};
+
+
+struct tracking_status_s {
+	uint64_t timestamp;
+
+	uint8_t computer_status;
+	uint8_t hunt_mode_state;
 };
 
 
