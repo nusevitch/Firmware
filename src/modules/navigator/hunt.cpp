@@ -28,8 +28,8 @@ Hunt::Hunt(Navigator *navigator, const char *name) :
 	_started(false),
 	_current_cmd_id(-1),
 	_tracking_cmd({0}),
-	_mission_result_pub(-1),
-	_mission_result({0}),
+	_hunt_result_pub(-1),
+	_hunt_result({0}),
 	_tracking_status_pub(-1),
 	_tracking_status({0})
 {
@@ -291,35 +291,35 @@ Hunt::set_waiting()
 void
 Hunt::report_cmd_finished()
 {
-	_mission_result.reached = true;
-	_mission_result.seq_reached = _current_cmd_id;
+	_hunt_result.reached = true;
+	_hunt_result.cmd_reached = _current_cmd_id;
 
-	publish_mission_result();
+	publish_hunt_result();
 }
 
 void
 Hunt::report_cmd_id()
 {
-	_mission_result.seq_current = _current_cmd_id;
-	publish_mission_result();
+	_hunt_result.cmd_current = _current_cmd_id;
+	publish_hunt_result();
 }
 
 
 void
-Hunt::publish_mission_result()
+Hunt::publish_hunt_result()
 {
 	/* lazily publish the mission result only once available */
-	if (_mission_result_pub > 0) {
+	if (_hunt_result_pub > 0) {
 		/* publish mission result */
-		orb_publish(ORB_ID(mission_result), _mission_result_pub, &_mission_result);
+		orb_publish(ORB_ID(hunt_result), _hunt_result_pub, &_hunt_result_pub);
 	} else {
 		/* advertise and publish */
-		_mission_result_pub = orb_advertise(ORB_ID(mission_result), &_mission_result);
+		_hunt_result_pub = orb_advertise(ORB_ID(hunt_result), &_hunt_result_pub);
 	}
 
 	/* reset reached bool */
-	_mission_result.reached = false;
-	_mission_result.finished = false;
+	_hunt_result.reached = false;
+	_hunt_result.finished = false;
 }
 
 void

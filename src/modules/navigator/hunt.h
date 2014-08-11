@@ -18,6 +18,7 @@
 #include <uORB/topics/vehicle_global_position.h>
 #include <uORB/topics/tracking_cmd.h>
 #include <uORB/topics/tracking_status.h>
+#include <uORB/topics/hunt_result.h>
 
 #include "navigator_mode.h"
 #include "mission_block.h"
@@ -68,7 +69,7 @@ private:
 	/*
 	 * publish the mission result (which should get picked up by mavlink module to be sent to ground)
 	 */
-	void publish_mission_result();
+	void publish_hunt_result();
 
 	/*
 	 * report that a status change has occurred
@@ -79,6 +80,11 @@ private:
 	 * publish the changed status to the corresponding orb message
 	 */
 	void publish_status();
+
+	/*
+	 * reset whether or not we have reached the hunt item
+	 */
+	void rest_hunt_item_reached();
 
 	/**
 	 * states that the hunt script can be in
@@ -102,8 +108,8 @@ private:
 
 	struct tracking_cmd_s _tracking_cmd;
 
-	orb_advert_t _mission_result_pub;
-	struct mission_result_s _mission_result;
+	orb_advert_t _hunt_result_pub;
+	struct hunt_result_s _hunt_result;
 
 	orb_advert_t _tracking_status_pub;
 	struct tracking_status_s _tracking_status;
