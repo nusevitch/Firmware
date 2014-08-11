@@ -367,7 +367,10 @@ Navigator::task_main()
 				_navigation_mode = &_mission;
 				break;
 			case NAVIGATION_STATE_AUTO_LOITER:
-				_navigation_mode = &_loiter;
+				// _navigation_mode = &_loiter;
+				// XXX: FOR NOW JUST HIJACK LOITER FOR HUNT
+				_navigation_mode = &_hunt;
+
 				break;
 			case NAVIGATION_STATE_AUTO_RTL:
 				_navigation_mode = &_rtl;
