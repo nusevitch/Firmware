@@ -29,7 +29,9 @@ Hunt::Hunt(Navigator *navigator, const char *name) :
 	_current_cmd_id(-1),
 	_tracking_cmd({0}),
 	_mission_result_pub(-1),
-	_mission_result({0})
+	_mission_result({0}),
+	_tracking_status_pub(-1),
+	_tracking_status({0})
 {
 	/* load initial params */
 	updateParams();
@@ -65,11 +67,22 @@ Hunt::on_activation()
 
 		// set the state to moving to first position
 		// XXX: maybe don't need state start, and just set it to state move here
-		_hunt_state = HUNT_STATE_START;
+		// _hunt_state = HUNT_STATE_START;
+
+
+
 	} else {
 		// need to check if we are at the last location
 		// if not at the last commanded location, go to last commanded location
 	}
+
+	// XXX: FOR NOW JUST GO INTO WAITING MODE REGARDLESS OF PREVIOUS START MODE
+	_hunt_state = HUNT_STATE_WAIT;
+	set_waiting(); // trigger it loitering just for safety
+
+	// broadcast the status change
+	// TODO: make change the state a function, will better outline the state machine...
+	report_status();
 
 	// set the created mission item to a position setpoint?
 	// also handle some of the states??
@@ -82,9 +95,31 @@ Hunt::on_active()
 {
 	// TODO: this is where all the stuff runs
 
+	if (is_mission_item_reached()) {
+
+		// we finished with the cmd, so broadcast that
+		report_cmd_finished();
+
+		// should never not be the case here, but have this if statement just in case....
+		if (_hunt_state != HUNT_STATE_WAIT) {
+			_hunt_state = HUNT_STATE_WAIT;
+
+			// have vehicle start waiting
+			set_waiting();
+
+			// reset whether or not we have reached the mission item
+			reset_mission_item_reached();
+
+			// state changed here, so report it
+			report_status();
+		}
+	}
+
+
+
 	// XXX: not sure if or or and is best here, depends on when hunt state is
 	// changed to wait
-	if (_hunt_state == HUNT_STATE_WAIT || is_mission_item_reached()) {
+	if (_hunt_state == HUNT_STATE_WAIT) {
 		// we have reached the desired point or are waiting
 
 		if (get_next_cmd()) {
@@ -92,7 +127,7 @@ Hunt::on_active()
 			set_next_item();
 
 			// set next item will handle the state change to a none wait state
-		} else {
+		} /*else {
 
 			// if we were not in a waiting state, need to go into a waiting state
 			// and need to tell the vehicle to loiter here (I think)
@@ -103,7 +138,7 @@ Hunt::on_active()
 				// put the vehicle into a waiting mode
 				set_waiting();
 			}
-		}
+		}*/
 	}
 
 	// XXX: IMPORTANT
@@ -216,6 +251,12 @@ Hunt::set_next_item()
 	pos_sp_triplet->next.valid = false;
 
 	_navigator->set_position_setpoint_triplet_updated();
+
+	// report the new cmd id
+	report_cmd_id();
+
+	// status must have changed if at this point, so report it
+	report_status();
 }
 
 
@@ -281,5 +322,25 @@ Hunt::publish_mission_result()
 	_mission_result.finished = false;
 }
 
+void
+Hunt::report_status()
+{
+	// update the tracking status state to the current hunt state
+	_tracking_status.hunt_mode_state = _hunt_state;
+}
+
+
+void
+Hunt::publish_status()
+{
+	/* lazily publish the hunt state only once available */
+	if (_tracking_status_pub > 0) {
+		/* publish mission result */
+		orb_publish(ORB_ID(tracking_status), _tracking_status_pub, &_tracking_status);
+	} else {
+		/* advertise and publish */
+		_tracking_status_pub = orb_advertise(ORB_ID(tracking_status), &_tracking_status);
+	}
+}
 
 

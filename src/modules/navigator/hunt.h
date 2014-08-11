@@ -17,6 +17,7 @@
 #include <uORB/topics/home_position.h>
 #include <uORB/topics/vehicle_global_position.h>
 #include <uORB/topics/tracking_cmd.h>
+#include <uORB/topics/tracking_status.h>
 
 #include "navigator_mode.h"
 #include "mission_block.h"
@@ -69,6 +70,16 @@ private:
 	 */
 	void publish_mission_result();
 
+	/*
+	 * report that a status change has occurred
+	 */
+	void report_status();
+
+	/*
+	 * publish the changed status to the corresponding orb message
+	 */
+	void publish_status();
+
 	/**
 	 * states that the hunt script can be in
 	 * will be used to help identify whether we
@@ -93,6 +104,9 @@ private:
 
 	orb_advert_t _mission_result_pub;
 	struct mission_result_s _mission_result;
+
+	orb_advert_t _tracking_status_pub;
+	struct tracking_status_s _tracking_status;
 
 
 };
