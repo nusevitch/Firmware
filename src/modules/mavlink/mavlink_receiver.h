@@ -160,7 +160,7 @@ private:
 	orb_advert_t _manual_pub;
 	orb_advert_t _apnt_gps_status_pub;
 	orb_advert_t _apnt_site_status_pub;
-	orb_advert_t _tracking_status_pub;
+	// orb_advert_t _tracking_status_pub;
 	orb_advert_t _tracking_cmd_pub;
 	orb_advert_t _apnt_position_pub;
 	bool _radio_status_available;
