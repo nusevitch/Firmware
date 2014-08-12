@@ -151,7 +151,7 @@ MODULES		+= lib/launchdetection
 
 #
 # APNT test module
-# MODULES += modules/everything_is_awesome
+ MODULES += modules/everything_is_awesome
 
 #
 # Transitional support - add commands from the NuttX export archive.
