@@ -236,3 +236,6 @@ ORB_DEFINE(apnt_position, struct apnt_position_s);
 
 #include "topics/tracking_cmd.h"
 ORB_DEFINE(tracking_cmd, struct tracking_cmd_s);
+
+#include "topics/hunt_result.h"
+ORB_DEFINE(hunt_result, struct hunt_result_s);
