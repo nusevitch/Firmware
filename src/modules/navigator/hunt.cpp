@@ -30,8 +30,8 @@ Hunt::Hunt(Navigator *navigator, const char *name) :
 	_tracking_cmd({0}),
 	_hunt_result_pub(-1),
 	_hunt_result({0}),
-	_tracking_status_pub(-1),
-	_tracking_status({0})
+	_hunt_state_pub(-1),
+	_hunt_state_s({0})
 {
 	/* load initial params */
 	updateParams();
@@ -326,7 +326,7 @@ void
 Hunt::report_status()
 {
 	// update the tracking status state to the current hunt state
-	_tracking_status.hunt_mode_state = _hunt_state;
+	_hunt_state_s.hunt_mode_state = _hunt_state;
 }
 
 
@@ -334,12 +334,12 @@ void
 Hunt::publish_status()
 {
 	/* lazily publish the hunt state only once available */
-	if (_tracking_status_pub > 0) {
+	if (_hunt_state_pub > 0) {
 		/* publish mission result */
-		orb_publish(ORB_ID(tracking_status), _tracking_status_pub, &_tracking_status);
+		orb_publish(ORB_ID(tracking_status), _hunt_state_pub, &_hunt_state_s);
 	} else {
 		/* advertise and publish */
-		_tracking_status_pub = orb_advertise(ORB_ID(tracking_status), &_tracking_status);
+		_hunt_state_pub = orb_advertise(ORB_ID(tracking_status), &_hunt_state_s);
 	}
 }
 

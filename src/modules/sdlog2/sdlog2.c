@@ -93,6 +93,7 @@
 #include <uORB/topics/apnt_gps_status.h>
 #include <uORB/topics/apnt_site_status.h>
 #include <uORB/topics/tracking_status.h>
+#include <uORB/topics/hunt_state.h>
 #include <uORB/topics/tracking_cmd.h>
 #include <uORB/topics/apnt_position.h>
 
@@ -958,6 +959,7 @@ int sdlog2_thread_main(int argc, char *argv[])
 		struct apnt_gps_status_s apnt_gps_status;
 		struct apnt_site_status_s apnt_site_status;
 		struct tracking_status_s tracking_status;
+		struct hunt_state_s hunt_state;
 		struct tracking_cmd_s tracking_cmd;
 		struct apnt_position_s apnt_position;
 	} buf;
@@ -1047,6 +1049,7 @@ int sdlog2_thread_main(int argc, char *argv[])
 		int agps_sub;
 		int asite_sub;
 		int track_sub;
+		int hunt_sub;
 		int tcmd_sub;
 		int apos_sub;
 	} subs;
@@ -1087,6 +1090,7 @@ int sdlog2_thread_main(int argc, char *argv[])
 	subs.agps_sub = orb_subscribe(ORB_ID(apnt_gps_status));
 	subs.asite_sub = orb_subscribe(ORB_ID(apnt_site_status));
 	subs.track_sub = orb_subscribe(ORB_ID(tracking_status));
+	subs.hunt_sub = orb_subscribe(ORB_ID(hunt_state));
 	subs.tcmd_sub = orb_subscribe(ORB_ID(tracking_cmd));
 	subs.apos_sub = orb_subscribe(ORB_ID(apnt_position));
 
@@ -1687,15 +1691,15 @@ int sdlog2_thread_main(int argc, char *argv[])
 		}
 
 		/* --- TRACKING STATUS --- */
-		if (copy_if_updated(ORB_ID(tracking_status), subs.track_sub, &buf.tracking_status)) {
+		if (copy_if_updated(ORB_ID(tracking_status), subs.track_sub, &buf.tracking_status) || copy_if_updated(ORB_ID(hunt_state), subs.hunt_sub, &buf.hunt_state)) {
 			log_msg.msg_type = LOG_TRAC_MSG;
 			log_msg.body.log_TRAC.computer_status = buf.tracking_status.computer_status;
-			log_msg.body.log_TRAC.hunt_state = buf.tracking_status.hunt_mode_state;
+			log_msg.body.log_TRAC.hunt_state = buf.hunt_state.hunt_mode_state;
 			LOGBUFFER_WRITE_AND_COUNT(TRAC);
 		}
 
-		/* --- TRACKING STATUS --- */
-		if (copy_if_updated(ORB_ID(tracking_cmd), subs.tcmd_sub, &buf.tracking_cmd)) {
+		/* --- TRACKING CMD --- */
+		if (copy_if_updated(ORB_ID(tracking_cmd), subs.tcmd_sub, &buf.tracking_cmd) ) {
 			log_msg.msg_type = LOG_TCMD_MSG;
 			log_msg.body.log_TCMD.cmd_id = buf.tracking_cmd.cmd_id;
 			log_msg.body.log_TCMD.cmd_type = buf.tracking_cmd.cmd_type;

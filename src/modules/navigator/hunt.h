@@ -18,6 +18,7 @@
 #include <uORB/topics/vehicle_global_position.h>
 #include <uORB/topics/tracking_cmd.h>
 #include <uORB/topics/tracking_status.h>
+#include <uORB/topics/hunt_state.h>
 #include <uORB/topics/hunt_result.h>
 
 #include "navigator_mode.h"
@@ -111,8 +112,8 @@ private:
 	orb_advert_t _hunt_result_pub;
 	struct hunt_result_s _hunt_result;
 
-	orb_advert_t _tracking_status_pub;
-	struct tracking_status_s _tracking_status;
+	orb_advert_t _hunt_state_pub;
+	struct hunt_state_s _hunt_state_s;
 
 
 };
