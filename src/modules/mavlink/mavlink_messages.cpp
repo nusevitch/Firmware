@@ -74,6 +74,7 @@
 #include <uORB/topics/tracking_status.h>
 #include <uORB/topics/tracking_cmd.h>
 #include <uORB/topics/apnt_position.h>
+#include <uORB/topics/hunt_result.h>
 #include <drivers/drv_rc_input.h>
 #include <drivers/drv_pwm_output.h>
 #include <drivers/drv_range_finder.h>
