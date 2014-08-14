@@ -231,6 +231,9 @@ ORB_DEFINE(apnt_site_status, struct apnt_site_status_s);
 #include "topics/tracking_status.h"
 ORB_DEFINE(tracking_status, struct tracking_status_s);
 
+#include "topics/hunt_state.h"
+ORB_DEFINE(hunt_state, struct hunt_state_s);
+
 #include "topics/apnt_position.h"
 ORB_DEFINE(apnt_position, struct apnt_position_s);
 
