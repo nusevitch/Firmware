@@ -51,6 +51,7 @@
 #include <dataman/dataman.h>
 #include <uORB/topics/mission.h>
 #include <uORB/topics/mission_result.h>
+#include <uORB/topics/hunt_result.h>
 
 /* oddly, ERROR is not defined for c++ */
 #ifdef ERROR
@@ -78,6 +79,7 @@ MavlinkMissionManager::MavlinkMissionManager(Mavlink *mavlink) :
 	_transfer_partner_compid(0),
 	_offboard_mission_sub(-1),
 	_mission_result_sub(-1),
+	_hunt_result_sub(-1),
 	_offboard_mission_pub(-1),
 	_slow_rate_limiter(2000000.0f / mavlink->get_rate_mult()),
 	_verbose(false),
@@ -283,6 +285,30 @@ MavlinkMissionManager::send_mission_item_reached(uint16_t seq)
 	if (_verbose) { warnx("WPM: Send MISSION_ITEM_REACHED reached_seq %u", wp_reached.seq); }
 }
 
+void
+MavlinkMissionManager::send_hunt_current(uint16_t id)
+{
+	mavlink_message_t msg;
+	mavlink_hunt_mission_current_t hc;
+
+	hc.current_cmd_id = id;
+
+	mavlink_msg_hunt_mission_current_encode_chan(mavlink_system.sysid, _comp_id, _channel, &msg, &hc);
+	_mavlink->send_message(&msg);
+}
+
+
+void
+MavlinkMissionManager::send_hunt_cmd_finished(uint16_t id)
+{
+	mavlink_message_t msg;
+	mavlink_hunt_mission_reached_t hr;
+
+	hr.reached_cmd_id = id;
+
+	mavlink_msg_hunt_mission_reached_encode_chan(mavlink_system.sysid, _comp_id, _channel, &msg, &hr);
+	_mavlink->send_message(&msg);
+}
 
 void
 MavlinkMissionManager::eventloop()
@@ -332,6 +358,24 @@ MavlinkMissionManager::eventloop()
 		} else {
 			/* try to send item again after timeout */
 			send_mission_item(_transfer_partner_sysid, _transfer_partner_compid, _transfer_seq - 1);
+		}
+	}
+
+	// AGAIN TEMP PUT HUNT CHECKS IN THIS LOOP, IDEALLY NEED TO MAKE OWN FN
+
+	updated = false;
+	orb_check(_hunt_result_sub, &updated);
+
+	if (updated) {
+		hunt_result_s hunt_result;
+		orb_copy(ORB_ID(hunt_result), _hunt_result_sub, &hunt_result);
+
+		// either we have reached, and want to send the reach update or updated current, ideally both
+		// shouldn't happen at once, but just to be sure we have it in an if statement to avoid any potential confusion
+		if (hunt_result.reached) {
+			send_hunt_cmd_finished(hunt_result.cmd_reached);
+		} else {
+			send_hunt_current(hunt_result.cmd_current);
 		}
 	}
 }

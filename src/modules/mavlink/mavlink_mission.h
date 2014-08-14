@@ -102,6 +102,7 @@ public:
 
 	void send_mission_request(uint8_t sysid, uint8_t compid, uint16_t seq);
 
+
 	/**
 	 *  @brief emits a message that a waypoint reached
 	 *
@@ -110,6 +111,14 @@ public:
 	 *  @param seq The waypoint sequence number the MAV has reached.
 	 */
 	void send_mission_item_reached(uint16_t seq);
+
+	// TEMPORARILY PUT THIS FUNCTIONS HERE
+	// THESE FUNCTIONS WILL SEND THE INFO ABOUT THE TRACKING MISSION AS NEEDED
+	void send_hunt_current(uint16_t id);
+
+	void send_hunt_cmd_finished(uint16_t id);
+
+
 
 	void eventloop();
 
@@ -166,6 +175,7 @@ private:
 
 	int			_offboard_mission_sub;
 	int			_mission_result_sub;
+	int			_hunt_result_sub;
 	orb_advert_t		_offboard_mission_pub;
 
 	MavlinkRateLimiter	_slow_rate_limiter;
