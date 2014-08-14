@@ -113,7 +113,7 @@ MavlinkReceiver::MavlinkReceiver(Mavlink *parent) :
 	_manual_pub(-1),
 	_apnt_gps_status_pub(-1),
 	_apnt_site_status_pub(-1),
-	// _tracking_status_pub(-1),
+	_tracking_status_pub(-1),
 	_tracking_cmd_pub(-1),
 	_apnt_position_pub(-1),
 	_radio_status_available(false),
@@ -1007,15 +1007,15 @@ MavlinkReceiver::handle_message_tracking_status(mavlink_message_t *msg) {
 
 	tracking_stat_s.timestamp = hrt_absolute_time();
 	tracking_stat_s.computer_status = t_status.computer_status;
-	tracking_stat_s.hunt_mode_state = t_status.hunt_mode_state;
+	// tracking_stat_s.hunt_mode_state = t_status.hunt_mode_state;
 
-	/*
+
 	if (_tracking_status_pub < 0) {
 		_tracking_status_pub = orb_advertise(ORB_ID(tracking_status), &tracking_stat_s);
 	} else {
 		orb_publish(ORB_ID(tracking_status), _tracking_status_pub, &tracking_stat_s);
 	}
-	*/
+
 }
 
 void
