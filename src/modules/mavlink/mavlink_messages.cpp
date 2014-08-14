@@ -72,6 +72,7 @@
 #include <uORB/topics/apnt_gps_status.h>
 #include <uORB/topics/apnt_site_status.h>
 #include <uORB/topics/tracking_status.h>
+#include <uORB/topics/hunt_state.h>
 #include <uORB/topics/tracking_cmd.h>
 #include <uORB/topics/apnt_position.h>
 #include <uORB/topics/hunt_result.h>
@@ -2046,7 +2047,9 @@ public:
 
 private:
 	MavlinkOrbSubscription *tracking_sub;
-	uint64_t time;
+	MavlinkOrbSubscription *hunt_state_sub;
+	uint64_t tracking_time;
+	uint64_t hunt_time;
 
 	/* do not allow top copying this class */
 	MavlinkStreamTrackingStatus(MavlinkStreamTrackingStatus &);
@@ -2055,21 +2058,28 @@ private:
 protected:
 	explicit MavlinkStreamTrackingStatus() : MavlinkStream(),
 		tracking_sub(nullptr),
-		time(0)
+		hunt_state_sub(nullptr),
+		tracking_time(0),
+		hunt_time(0)
 	{}
 
 	void subscribe(Mavlink *mavlink)
 	{
 		tracking_sub = mavlink->add_orb_subscription(ORB_ID(tracking_status));
+		hunt_state_sub = mavlink->add_orb_subscription(ORB_ID(hunt_state));
 	}
 
 	void send(const hrt_abstime t)
 	{
 		struct tracking_status_s status;
+		struct hunt_state_s hunt_state;
 
-		if (tracking_sub->update(&time, &status)) {
+		bool updated = tracking_sub->update(&tracking_time, &status);
+				updated |= hunt_state_sub->update(&tracking_time, &hunt_state);
+
+		if (updated) {
 			mavlink_msg_tracking_status_send(_channel, status.timestamp,
-					status.computer_status, status.hunt_mode_state);
+					status.computer_status, hunt_state.hunt_mode_state);
 		}
 	}
 };
