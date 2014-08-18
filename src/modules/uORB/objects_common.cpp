@@ -242,3 +242,6 @@ ORB_DEFINE(tracking_cmd, struct tracking_cmd_s);
 
 #include "topics/hunt_result.h"
 ORB_DEFINE(hunt_result, struct hunt_result_s);
+
+#include "topics/temp_hunt_result.h"
+ORB_DEFINE(temp_hunt_result, struct temp_hunt_result_s);
