@@ -395,6 +395,7 @@ struct log_TEL_s {
 
 /* need to split gps status message into 3 log messages due to size */
 /* --- AGP0 - APNT GPS STATUS 0 --- */
+/*
 #define LOG_AGP0_MSG 64
 struct log_AGP0_s {
 	uint64_t gps_time;
@@ -404,6 +405,7 @@ struct log_AGP0_s {
 };
 
 /* --- AGP1 - APNT GPS STATUS 1 --- */
+/*
 #define LOG_AGP1_MSG 65
 struct log_AGP1_s {
 	uint8_t prn[8];
@@ -411,6 +413,7 @@ struct log_AGP1_s {
 };
 
 /* --- AGP2 - APNT GPS STATUS 2 --- */
+/*
 #define LOG_AGP2_MSG 66
 struct log_AGP2_s {
 	uint8_t elevation[8];
@@ -418,6 +421,7 @@ struct log_AGP2_s {
 };
 
 /* --- ASIT - APNT SITE STATUS --- */
+/*
 #define LOG_ASIT_MSG 67
 struct log_ASIT_s {
 	uint32_t id[4];
@@ -428,6 +432,7 @@ struct log_ASIT_s {
 
 
 /* --- TRAC - TRACKING STATUS --- */
+/*
 #define LOG_TRAC_MSG 68
 struct log_TRAC_s {
 	uint8_t computer_status;
@@ -435,6 +440,7 @@ struct log_TRAC_s {
 };
 
 /* --- TCMD - TRACKING CMD --- */
+/*
 #define LOG_TCMD_MSG 69
 struct log_TCMD_s {
 	uint8_t cmd_id;
@@ -447,6 +453,7 @@ struct log_TCMD_s {
 
 
 /* --- APOS - APNT POSITION --- */
+/*
 #define LOG_APOS_MSG 70
 struct log_APOS_s {
 	uint64_t position_time;

@@ -90,12 +90,14 @@
 #include <uORB/topics/servorail_status.h>
 #include <uORB/topics/wind_estimate.h>
 
+/*
 #include <uORB/topics/apnt_gps_status.h>
 #include <uORB/topics/apnt_site_status.h>
 #include <uORB/topics/tracking_status.h>
 #include <uORB/topics/hunt_state.h>
 #include <uORB/topics/tracking_cmd.h>
 #include <uORB/topics/apnt_position.h>
+*/
 
 #include <systemlib/systemlib.h>
 #include <systemlib/param/param.h>
@@ -956,12 +958,14 @@ int sdlog2_thread_main(int argc, char *argv[])
 		struct servorail_status_s servorail_status;
 		struct satellite_info_s sat_info;
 		struct wind_estimate_s wind_estimate;
+		/*
 		struct apnt_gps_status_s apnt_gps_status;
 		struct apnt_site_status_s apnt_site_status;
 		struct tracking_status_s tracking_status;
 		struct hunt_state_s hunt_state;
 		struct tracking_cmd_s tracking_cmd;
 		struct apnt_position_s apnt_position;
+		*/
 	} buf;
 
 	memset(&buf, 0, sizeof(buf));
@@ -1003,6 +1007,7 @@ int sdlog2_thread_main(int argc, char *argv[])
 			struct log_GS1B_s log_GS1B;
 			struct log_TECS_s log_TECS;
 			struct log_WIND_s log_WIND;
+			/*
 			struct log_AGP0_s log_AGP0;
 			struct log_AGP1_s log_AGP1;
 			struct log_AGP2_s log_AGP2;
@@ -1010,6 +1015,7 @@ int sdlog2_thread_main(int argc, char *argv[])
 			struct log_TRAC_s log_TRAC;
 			struct log_TCMD_s log_TCMD;
 			struct log_APOS_s log_APOS;
+			*/
 		} body;
 	} log_msg = {
 		LOG_PACKET_HEADER_INIT(0)
@@ -1046,12 +1052,14 @@ int sdlog2_thread_main(int argc, char *argv[])
 		int system_power_sub;
 		int servorail_status_sub;
 		int wind_sub;
+		/*
 		int agps_sub;
 		int asite_sub;
 		int track_sub;
 		int hunt_sub;
 		int tcmd_sub;
 		int apos_sub;
+		*/
 	} subs;
 
 	subs.cmd_sub = orb_subscribe(ORB_ID(vehicle_command));
@@ -1087,12 +1095,14 @@ int sdlog2_thread_main(int argc, char *argv[])
 	/* we need to rate-limit wind, as we do not need the full update rate */
 	orb_set_interval(subs.wind_sub, 90);
 
+	/*
 	subs.agps_sub = orb_subscribe(ORB_ID(apnt_gps_status));
 	subs.asite_sub = orb_subscribe(ORB_ID(apnt_site_status));
 	subs.track_sub = orb_subscribe(ORB_ID(tracking_status));
 	subs.hunt_sub = orb_subscribe(ORB_ID(hunt_state));
 	subs.tcmd_sub = orb_subscribe(ORB_ID(tracking_cmd));
 	subs.apos_sub = orb_subscribe(ORB_ID(apnt_position));
+	*/
 
 	thread_running = true;
 
