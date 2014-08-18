@@ -75,7 +75,7 @@
 #include <uORB/topics/hunt_state.h>
 #include <uORB/topics/tracking_cmd.h>
 #include <uORB/topics/apnt_position.h>
-#include <uORB/topics/hunt_result.h>
+#include <uORB/topics/temp_hunt_result.h> // TEMPORARY
 #include <drivers/drv_rc_input.h>
 #include <drivers/drv_pwm_output.h>
 #include <drivers/drv_range_finder.h>
@@ -2138,6 +2138,58 @@ protected:
 };
 
 
+class MavlinkStreamHuntReached : public MavlinkStream
+{
+public:
+	const char *get_name() const
+	{
+		return MavlinkStreamHuntReached::get_name_static();
+	}
+
+	static const char *get_name_static()
+	{
+		return "HUNT_MISSION_REACHED";
+	}
+
+	uint8_t get_id()
+	{
+		return MAVLINK_MSG_ID_HUNT_MISSION_REACHED;
+	}
+
+	static MavlinkStream *new_instance()
+	{
+		return new MavlinkStreamHuntReached();
+	}
+
+private:
+	MavlinkOrbSubscription *temp_hunt_result_sub;
+	uint64_t time;
+
+	/* do not allow top copying this class */
+	MavlinkStreamHuntReached(MavlinkStreamHuntReached &);
+	MavlinkStreamHuntReached& operator = (const MavlinkStreamHuntReached &);
+
+protected:
+	explicit MavlinkStreamHuntReached() : MavlinkStream(),
+	temp_hunt_result_sub(nullptr),
+		time(0)
+	{}
+
+	void subscribe(Mavlink *mavlink)
+	{
+		temp_hunt_result_sub = mavlink->add_orb_subscription(ORB_ID(temp_hunt_result));
+	}
+
+	void send(const hrt_abstime t)
+	{
+		struct temp_hunt_result_s res;
+
+		if (temp_hunt_result_sub->update(&time, &res)) {
+			mavlink_msg_hunt_mission_reached_send(_channel, res.cmd_reached);
+		}
+	}
+};
+
 
 
 class MavlinkStreamApntPosition : public MavlinkStream
@@ -2225,6 +2277,7 @@ StreamListItem *streams_list[] = {
 	new StreamListItem(&MavlinkStreamApntSiteStatus::new_instance, &MavlinkStreamApntSiteStatus::get_name_static),
 	new StreamListItem(&MavlinkStreamTrackingStatus::new_instance, &MavlinkStreamTrackingStatus::get_name_static),
 	new StreamListItem(&MavlinkStreamTrackingCmd::new_instance, &MavlinkStreamTrackingCmd::get_name_static),
+	new StreamListItem(&MavlinkStreamHuntReached::new_instance, &MavlinkStreamHuntReached::get_name_static),
 	new StreamListItem(&MavlinkStreamApntPosition::new_instance, &MavlinkStreamApntPosition::get_name_static),
 	nullptr
 };
