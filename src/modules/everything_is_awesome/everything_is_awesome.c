@@ -20,6 +20,7 @@
 #include <uORB/topics/tracking_cmd.h>
 #include <uORB/topics/tracking_status.h>
 #include <uORB/topics/hunt_state.h>
+#include <uORB/topics/temp_hunt_result.h>
 
 __EXPORT int everything_is_awesome_main(int argc, char *argv[]);
 
@@ -33,6 +34,7 @@ int everything_is_awesome_main(int argc, char *argv[]) {
 	int apnt_sub_fd = orb_subscribe(ORB_ID(apnt_gps_status));
 	int tracking_cmd_sub_fd = orb_subscribe(ORB_ID(tracking_cmd));
 	int tracking_status_sub_fd = orb_subscribe(ORB_ID(tracking_status));
+	int temp_hunt_result_sub_fd = orb_subscribe(ORB_ID(temp_hunt_result));
 
 	/* advertise hunt state topic */
 	struct hunt_state_s hunt_state;
@@ -48,6 +50,7 @@ int everything_is_awesome_main(int argc, char *argv[]) {
 			{ .fd = apnt_sub_fd,   .events = POLLIN },
 			{ .fd = tracking_cmd_sub_fd,   .events = POLLIN },
 			{ .fd = tracking_status_sub_fd,   .events = POLLIN },
+			{ .fd = temp_hunt_result_sub_fd,   .events = POLLIN },
 	};
 
 	int error_counter = 0;
@@ -55,7 +58,7 @@ int everything_is_awesome_main(int argc, char *argv[]) {
 	while (count < 10) {
 
 		// wait 10 seconds
-		int poll_ret = poll(fds, 1, 10000);
+		int poll_ret = poll(fds, 4, 10000);
 
 		if (poll_ret == 0) {
 			printf("[everything_is_awesome] no apnt gps status change in last 5 seconds\n");
@@ -90,13 +93,20 @@ int everything_is_awesome_main(int argc, char *argv[]) {
 				hunt_state.timestamp = tracking_status.timestamp;
 
 				if (hunt_state.hunt_mode_state != HUNT_STATE_WAIT) {
-					hunt_state.hunt_mode_state = HUNT_STATE_MOVE;
-				} else {
 					hunt_state.hunt_mode_state = HUNT_STATE_WAIT;
+				} else {
+					hunt_state.hunt_mode_state = HUNT_STATE_MOVE;
 				}
 
 				orb_publish(ORB_ID(hunt_state), hunt_state_pub, &hunt_state);
 
+			}
+			if (fds[3].revents & POLLIN) {
+				// print out the last command id
+				struct temp_hunt_result_s res;
+				orb_copy(ORB_ID(temp_hunt_result), temp_hunt_result_sub_fd, &res);
+				printf("[everything_is_awesome] HUNT RESULT: \n"
+						"\t reached: %u\n", res.cmd_reached);
 			}
 		}
 
