@@ -115,6 +115,7 @@ MavlinkReceiver::MavlinkReceiver(Mavlink *parent) :
 	_apnt_site_status_pub(-1),
 	_tracking_status_pub(-1),
 	_tracking_cmd_pub(-1),
+	_temp_hunt_result_pub(-1), // TEMPORARY
 	_apnt_position_pub(-1),
 	_radio_status_available(false),
 	_control_mode_sub(orb_subscribe(ORB_ID(vehicle_control_mode))),
@@ -191,6 +192,9 @@ MavlinkReceiver::handle_message(mavlink_message_t *msg)
 		break;
 	case MAVLINK_MSG_ID_TRACKING_CMD:
 		handle_message_tracking_cmd(msg);
+		break;
+	case MAVLINK_MSG_ID_HUNT_MISSION_REACHED:
+		handle_message_hunt_reached(msg);
 		break;
 
 	default:
@@ -1058,6 +1062,24 @@ MavlinkReceiver::handle_message_tracking_cmd(mavlink_message_t *msg) {
 		_tracking_cmd_pub = orb_advertise(ORB_ID(tracking_cmd), &track_cmd_s);
 	} else {
 		orb_publish(ORB_ID(tracking_cmd), _tracking_cmd_pub, &track_cmd_s);
+	}
+}
+
+// THIS IS A TEMPORARY FUNCTION
+void
+MavlinkReceiver::handle_message_hunt_reached(mavlink_message_t *msg) {
+	mavlink_hunt_mission_reached_t hmr;
+	mavlink_msg_hunt_mission_reached_decode(msg, &hmr);
+
+	struct temp_hunt_result_s result;
+	memset(&result, 0, sizeof(result));
+
+	result.cmd_reached = hmr.reached_cmd_id;
+
+	if (_temp_hunt_result_pub < 0) {
+		_temp_hunt_result_pub = orb_advertise(ORB_ID(temp_hunt_result), &result);
+	} else {
+		orb_publish(ORB_ID(temp_hunt_result), _temp_hunt_result_pub, &result);
 	}
 }
 

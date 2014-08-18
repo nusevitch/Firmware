@@ -74,6 +74,7 @@
 #include <uORB/topics/apnt_site_status.h>
 #include <uORB/topics/tracking_status.h>
 #include <uORB/topics/tracking_cmd.h>
+#include <uORB/topics/temp_hunt_result.h> // THIS IS TEMPORARY
 #include <uORB/topics/apnt_position.h>
 
 #include "mavlink_ftp.h"
@@ -129,6 +130,7 @@ private:
 	void handle_message_apnt_site_status(mavlink_message_t *msg);
 	void handle_message_tracking_status(mavlink_message_t *msg);
 	void handle_message_tracking_cmd(mavlink_message_t *msg);
+	void handle_message_hunt_reached(mavlink_message_t *msg);
 	void handle_message_apnt_position(mavlink_message_t *msg);
 
 	void *receive_thread(void *arg);
@@ -162,6 +164,7 @@ private:
 	orb_advert_t _apnt_site_status_pub;
 	orb_advert_t _tracking_status_pub;
 	orb_advert_t _tracking_cmd_pub;
+	orb_advert_t _temp_hunt_result_pub;		// THIS IS TEMPORARY
 	orb_advert_t _apnt_position_pub;
 	bool _radio_status_available;
 	int _control_mode_sub;
