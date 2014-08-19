@@ -525,7 +525,7 @@ static const struct log_format_s log_formats[] = {
 	LOG_FORMAT(GS1B, "BBBBBBBBBBBBBBBB",	"s0,s1,s2,s3,s4,s5,s6,s7,s8,s9,s10,s11,s12,s13,s14,s15"),
 	LOG_FORMAT(TECS, "fffffffffffffffB",	"ASP,A,AF,FSP,F,FF,AsSP,As,AsF,AsDSP,AsD,TERSP,TER,EDRSP,EDR,M"),
 	LOG_FORMAT(WIND, "ffff",	"X,Y,CovX,CovY"),
-	LOG_FORMAT(AGP0, "Qfff",	"aGPSTime,aGPSLat,aGPSLon,aGPSAlt"),
+	// LOG_FORMAT(AGP0, "Qfff",	"aGPSTime,aGPSLat,aGPSLon,aGPSAlt"),
 	// LOG_FORMAT(AGP1, "BBBBBBBBhhhhhhhh",	"p0,p1,p2,p3,p4,p5,p6,p7,az0,az1,az2,az3,az4,az5,az6,az7"),
 	// LOG_FORMAT(AGP2, "BBBBBBBBBBBBBBBB", 	"el0,el1,el2,el3,el4,el5,el6,el7,s0,s1,s2,s3,s4,s5,s6,s7"),
 	// LOG_FORMAT(ASIT, "IIIIffffffffHHHH", 	"id0,id1,id2,id3,la0,la1,la2,la3,lo0,lo1,lo2,lo3,si0,si1,si2,si3"),
