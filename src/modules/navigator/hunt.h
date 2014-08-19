@@ -92,6 +92,7 @@ private:
 	 * will be used to help identify whether we
 	 * should be polling for the next command or not
 	 */
+	/*
 	enum HuntState {
 		HUNT_STATE_OFF = 0,		// hunt has been turned off
 		HUNT_STATE_START,		// hunt just started, need to go to starting position
@@ -99,13 +100,16 @@ private:
 		HUNT_STATE_MOVE,		// executing a move command from tracking
 		HUNT_STATE_ROTATE,		// executing a rotate command from tracking
 	} _hunt_state;
+	*/
+
+	int _hunt_state;
 
 	/**
 	 * boolean to simply hold whether or not a hunt has started
 	 * will just change the behavior of vehicle when coming from off state
 	 */
 	bool _started;
-	int _current_cmd_id;
+	uint16_t _current_cmd_id;
 
 	struct tracking_cmd_s _tracking_cmd;
 
@@ -114,6 +118,8 @@ private:
 
 	orb_advert_t _hunt_state_pub;
 	struct hunt_state_s _hunt_state_s;
+
+	hrt_abstime _temp_time;
 
 
 };

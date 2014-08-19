@@ -26,12 +26,13 @@ Hunt::Hunt(Navigator *navigator, const char *name) :
 	MissionBlock(navigator, name),
 	_hunt_state(HUNT_STATE_OFF),
 	_started(false),
-	_current_cmd_id(-1),
+	_current_cmd_id(0),
 	_tracking_cmd({0}),
 	_hunt_result_pub(-1),
 	_hunt_result({0}),
 	_hunt_state_pub(-1),
-	_hunt_state_s({0})
+	_hunt_state_s({0}),
+	_temp_time(hrt_absolute_time())
 {
 	/* load initial params */
 	updateParams();
@@ -69,12 +70,22 @@ Hunt::on_activation()
 		// XXX: maybe don't need state start, and just set it to state move here
 		// _hunt_state = HUNT_STATE_START;
 
+		// make sure it is known we cannot use the current mission item for loiter
+		// just needed for initial hover
+		_navigator->set_can_loiter_at_sp(false);
+
 
 
 	} else {
 		// need to check if we are at the last location
 		// if not at the last commanded location, go to last commanded location
 	}
+
+	// create a mission item for the current location
+	_mission_item.lat = _navigator->get_global_position()->lat;
+	_mission_item.lon = _navigator->get_global_position()->lon;
+	_mission_item.altitude = _navigator->get_global_position()->alt;
+	_mission_item.altitude_is_relative = false;
 
 	// XXX: FOR NOW JUST GO INTO WAITING MODE REGARDLESS OF PREVIOUS START MODE
 	_hunt_state = HUNT_STATE_WAIT;
@@ -86,7 +97,8 @@ Hunt::on_activation()
 
 	// set the created mission item to a position setpoint?
 	// also handle some of the states??
-	set_next_item();
+	// XXX: not necessarily a mission item yet, so definitely do not set the next mission item
+	// set_next_item();
 
 }
 
@@ -95,7 +107,9 @@ Hunt::on_active()
 {
 	// TODO: this is where all the stuff runs
 
-	if (is_mission_item_reached()) {
+	// only check mission success when not in a waiting mode (to avoid always checking whether or not
+	// we have reached the cmd when we are just waiting around)
+	if (_hunt_state != HUNT_STATE_WAIT && is_mission_item_reached()) {
 
 		// we finished with the cmd, so broadcast that
 		report_cmd_finished();
@@ -115,6 +129,18 @@ Hunt::on_active()
 		}
 	}
 
+
+	// temporarily just change the state every once in a while
+	/*
+	if (_temp_time - hrt_absolute_time() > 10e6) {
+		if (_hunt_state == HUNT_STATE_ROTATE) {
+			_hunt_state = HUNT_STATE_OFF;
+		} else {
+			_hunt_state++;
+		}
+		_temp_time = hrt_absolute_time();
+		report_status();
+	} */
 
 
 	// XXX: not sure if or or and is best here, depends on when hunt state is
@@ -327,6 +353,9 @@ Hunt::report_status()
 {
 	// update the tracking status state to the current hunt state
 	_hunt_state_s.hunt_mode_state = _hunt_state;
+
+	// need to then publish the status change
+	publish_status();
 }
 
 
@@ -335,11 +364,11 @@ Hunt::publish_status()
 {
 	/* lazily publish the hunt state only once available */
 	if (_hunt_state_pub > 0) {
-		/* publish mission result */
-		orb_publish(ORB_ID(tracking_status), _hunt_state_pub, &_hunt_state_s);
+		/* publish current hunt state */
+		orb_publish(ORB_ID(hunt_state), _hunt_state_pub, &_hunt_state_s);
 	} else {
 		/* advertise and publish */
-		_hunt_state_pub = orb_advertise(ORB_ID(tracking_status), &_hunt_state_s);
+		_hunt_state_pub = orb_advertise(ORB_ID(hunt_state), &_hunt_state_s);
 	}
 }
 
