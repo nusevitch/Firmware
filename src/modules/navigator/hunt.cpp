@@ -272,6 +272,7 @@ Hunt::set_next_item()
 
 
 	// need to reset the mission item reached info
+	// XXX: THIS MAY BE UNNECESSARY??
 	reset_mission_item_reached();
 
 	/* convert mission item to current position setpoint and make it valid */
