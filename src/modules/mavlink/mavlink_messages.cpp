@@ -76,6 +76,7 @@
 #include <uORB/topics/tracking_cmd.h>
 #include <uORB/topics/apnt_position.h>
 #include <uORB/topics/temp_hunt_result.h> // TEMPORARY
+#include <uORB/topics/hunt_result.h>
 #include <drivers/drv_rc_input.h>
 #include <drivers/drv_pwm_output.h>
 #include <drivers/drv_range_finder.h>
@@ -2163,7 +2164,9 @@ public:
 
 private:
 	MavlinkOrbSubscription *temp_hunt_result_sub;
+	MavlinkOrbSubscription *hunt_result_sub;
 	uint64_t time;
+	uint64_t res_time;
 
 	/* do not allow top copying this class */
 	MavlinkStreamHuntReached(MavlinkStreamHuntReached &);
@@ -2172,20 +2175,27 @@ private:
 protected:
 	explicit MavlinkStreamHuntReached() : MavlinkStream(),
 	temp_hunt_result_sub(nullptr),
-		time(0)
+	hunt_result_sub(nullptr),
+		time(0),
+		res_time(0)
 	{}
 
 	void subscribe(Mavlink *mavlink)
 	{
 		temp_hunt_result_sub = mavlink->add_orb_subscription(ORB_ID(temp_hunt_result));
+		hunt_result_sub = mavlink->add_orb_subscription(ORB_ID(hunt_result));
 	}
 
 	void send(const hrt_abstime t)
 	{
 		struct temp_hunt_result_s res;
+		struct hunt_result_s real_res;
 
 		if (temp_hunt_result_sub->update(&time, &res)) {
 			mavlink_msg_hunt_mission_reached_send(_channel, res.cmd_reached);
+		}
+		if (hunt_result_sub->update(&res_time, &real_res)) {
+			mavlink_msg_hunt_mission_reached_send(_channel, real_res.cmd_reached);
 		}
 	}
 };
