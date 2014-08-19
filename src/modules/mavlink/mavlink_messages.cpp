@@ -376,6 +376,60 @@ protected:
 	}
 };
 
+class MavlinkStreamSystemTimeUsec : public MavlinkStream
+{
+public:
+	const char *get_name() const
+	{
+		return MavlinkStreamSystemTimeUsec::get_name_static();
+	}
+
+	static const char *get_name_static ()
+	{
+		return "SYSTEM_TIME_USEC";
+	}
+
+	uint8_t get_id()
+	{
+		return MAVLINK_MSG_ID_SYSTEM_TIME_USEC;
+	}
+
+	static MavlinkStream *new_instance()
+	{
+		return new MavlinkStreamSystemTimeUsec();
+	}
+
+private:
+	MavlinkOrbSubscription *gps_sub;
+	uint64_t gps_boot_time;
+
+	/* do not allow top copying this class */
+	MavlinkStreamSystemTimeUsec(MavlinkStreamSystemTimeUsec &);
+	MavlinkStreamSystemTimeUsec& operator = (const MavlinkStreamSystemTimeUsec &);
+
+protected:
+	explicit MavlinkStreamSystemTimeUsec() : MavlinkStream(),
+	gps_sub(nullptr),
+	gps_boot_time(0)
+	{}
+
+	void subscribe(Mavlink *mavlink)
+	{
+		gps_sub = mavlink->add_orb_subscription(ORB_ID(vehicle_gps_position));
+	}
+
+	void send(const hrt_abstime t)
+	{
+		struct vehicle_gps_position_s gps;
+
+		if (gps_sub->update(&gps_boot_time, &gps)) {
+			mavlink_msg_system_time_usec_send(_channel,
+					gps.time_gps_usec,
+					gps.timestamp_position);
+		}
+	}
+};
+
 
 class MavlinkStreamHighresIMU : public MavlinkStream
 {
@@ -2264,6 +2318,7 @@ protected:
 StreamListItem *streams_list[] = {
 	new StreamListItem(&MavlinkStreamHeartbeat::new_instance, &MavlinkStreamHeartbeat::get_name_static),
 	new StreamListItem(&MavlinkStreamSysStatus::new_instance, &MavlinkStreamSysStatus::get_name_static),
+	new StreamListItem(&MavlinkStreamSystemTimeUsec::new_instance, &MavlinkStreamSystemTimeUsec::get_name_static),
 	new StreamListItem(&MavlinkStreamHighresIMU::new_instance, &MavlinkStreamHighresIMU::get_name_static),
 	new StreamListItem(&MavlinkStreamAttitude::new_instance, &MavlinkStreamAttitude::get_name_static),
 	new StreamListItem(&MavlinkStreamAttitudeQuaternion::new_instance, &MavlinkStreamAttitudeQuaternion::get_name_static),

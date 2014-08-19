@@ -1458,6 +1458,7 @@ Mavlink::task_main(int argc, char *argv[])
 	switch (_mode) {
 	case MAVLINK_MODE_NORMAL:
 		configure_stream("SYS_STATUS", 1.0f);
+		configure_stream("SYSTEM_TIME_USEC", 1.0f * rate_mult);
 		configure_stream("GPS_GLOBAL_ORIGIN", 0.5f);
 		configure_stream("HIGHRES_IMU", 1.0f * rate_mult);
 		configure_stream("ATTITUDE", 10.0f * rate_mult);
