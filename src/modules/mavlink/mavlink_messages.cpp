@@ -2195,7 +2195,13 @@ protected:
 			mavlink_msg_hunt_mission_reached_send(_channel, res.cmd_reached);
 		}
 		if (hunt_result_sub->update(&res_time, &real_res)) {
-			mavlink_msg_hunt_mission_reached_send(_channel, real_res.cmd_reached);
+
+			// determine if sending a reached id or current id
+			if (real_res.reached) {
+				mavlink_msg_hunt_mission_reached_send(_channel, real_res.cmd_reached);
+			} else { // means we are sending a current id
+				mavlink_msg_hunt_mission_current_send(_channel, real_res.cmd_current);
+			}
 		}
 	}
 };
