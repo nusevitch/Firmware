@@ -90,8 +90,9 @@ int everything_is_awesome_main(int argc, char *argv[]) {
 				printf("[everything_is_awsome TRACKING STATUS: \n"
 						"\t%llu\n\t%u\n", tracking_status.timestamp, tracking_status.computer_status);
 
-				hunt_state.timestamp = tracking_status.timestamp;
+				// hunt_state.timestamp = tracking_status.timestamp;
 
+				/*
 				if (hunt_state.hunt_mode_state != HUNT_STATE_WAIT) {
 					hunt_state.hunt_mode_state = HUNT_STATE_WAIT;
 				} else {
@@ -99,6 +100,7 @@ int everything_is_awesome_main(int argc, char *argv[]) {
 				}
 
 				orb_publish(ORB_ID(hunt_state), hunt_state_pub, &hunt_state);
+				*/
 
 			}
 			if (fds[3].revents & POLLIN) {
@@ -109,6 +111,15 @@ int everything_is_awesome_main(int argc, char *argv[]) {
 						"\t reached: %u\n", res.cmd_reached);
 			}
 		}
+
+		hunt_state.timestamp = hrt_absolute_time();
+		if (hunt_state.hunt_mode_state != HUNT_STATE_WAIT) {
+			hunt_state.hunt_mode_state = HUNT_STATE_WAIT;
+		} else {
+			hunt_state.hunt_mode_state = HUNT_STATE_MOVE;
+		}
+
+		orb_publish(ORB_ID(hunt_state), hunt_state_pub, &hunt_state);
 
 		// increase the counter
 		count++;
