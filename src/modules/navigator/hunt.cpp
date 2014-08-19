@@ -44,6 +44,8 @@ Hunt::Hunt(Navigator *navigator, const char *name) :
 Hunt::~Hunt()
 {
 	// destructor, don't think need anything here
+
+	// maybe close publisher...
 }
 
 void
@@ -326,6 +328,9 @@ Hunt::report_cmd_finished()
 void
 Hunt::report_cmd_id()
 {
+	// just make sure that reached and finished are both false
+	_hunt_result.reached = false;
+	_hunt_result.finished = false;
 	_hunt_result.cmd_current = _current_cmd_id;
 	publish_hunt_result();
 }
