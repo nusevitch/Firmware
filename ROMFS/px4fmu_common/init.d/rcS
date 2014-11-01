@@ -441,6 +441,9 @@ then
 	fi
 
 	mavlink start $MAVLINK_FLAGS
+	
+	# start the mavlink thread for APNT communication
+	mavlink start -d /dev/ttyS2 -b 115200
 
 	#
 	# Sensors, Logging, GPS
