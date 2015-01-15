@@ -69,6 +69,7 @@
 
 #include "ubx.h"
 #include "mtk.h"
+#include "ashtech.h"
 
 
 #define TIMEOUT_5HZ 500
@@ -273,7 +274,6 @@ GPS::task_main_trampoline(void *arg)
 void
 GPS::task_main()
 {
-	log("starting");
 
 	/* open the serial port */
 	_serial_fd = ::open(_port, O_RDWR);
@@ -341,6 +341,10 @@ GPS::task_main()
 				_Helper = new MTK(_serial_fd, &_report_gps_pos);
 				break;
 
+			case GPS_DRIVER_MODE_ASHTECH:
+				_Helper = new ASHTECH(_serial_fd, &_report_gps_pos, _p_report_sat_info);
+				break;
+
 			default:
 				break;
 			}
@@ -402,6 +406,10 @@ GPS::task_main()
 							mode_str = "MTK";
 							break;
 
+						case GPS_DRIVER_MODE_ASHTECH:
+							mode_str = "ASHTECH";
+							break;
+
 						default:
 							break;
 						}
@@ -429,6 +437,10 @@ GPS::task_main()
 				break;
 
 			case GPS_DRIVER_MODE_MTK:
+				_mode = GPS_DRIVER_MODE_ASHTECH;
+				break;
+
+			case GPS_DRIVER_MODE_ASHTECH:
 				_mode = GPS_DRIVER_MODE_UBX;
 				break;
 
@@ -473,6 +485,10 @@ GPS::print_info()
 
 	case GPS_DRIVER_MODE_MTK:
 		warnx("protocol: MTK");
+		break;
+
+	case GPS_DRIVER_MODE_ASHTECH:
+		warnx("protocol: ASHTECH");
 		break;
 
 	default:
@@ -536,7 +552,7 @@ start(const char *uart_path, bool fake_gps, bool enable_sat_info)
 	fd = open(GPS_DEVICE_PATH, O_RDONLY);
 
 	if (fd < 0) {
-		errx(1, "Could not open device path: %s\n", GPS_DEVICE_PATH);
+		errx(1, "open: %s\n", GPS_DEVICE_PATH);
 		goto fail;
 	}
 
@@ -549,7 +565,7 @@ fail:
 		g_dev = nullptr;
 	}
 
-	errx(1, "driver start failed");
+	errx(1, "start failed");
 }
 
 /**
@@ -588,7 +604,7 @@ reset()
 		err(1, "failed ");
 
 	if (ioctl(fd, SENSORIOCRESET, 0) < 0)
-		err(1, "driver reset failed");
+		err(1, "reset failed");
 
 	exit(0);
 }
@@ -600,7 +616,7 @@ void
 info()
 {
 	if (g_dev == nullptr)
-		errx(1, "driver not running");
+		errx(1, "not running");
 
 	g_dev->print_info();
 

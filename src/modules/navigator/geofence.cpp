@@ -48,6 +48,7 @@
 #include <ctype.h>
 #include <nuttx/config.h>
 #include <unistd.h>
+#include <mavlink/mavlink_log.h>
 
 
 /* Oddly, ERROR is not defined for C++ */
@@ -62,7 +63,12 @@ Geofence::Geofence() :
 		_altitude_min(0),
 		_altitude_max(0),
 		_verticesCount(0),
-		param_geofence_on(this, "ON")
+		_param_geofence_on(this, "ON"),
+		_param_altitude_mode(this, "ALTMODE"),
+		_param_source(this, "SOURCE"),
+		_param_counter_threshold(this, "COUNT"),
+		_outside_counter(0),
+		_mavlinkFd(-1)
 {
 	/* Load initial params */
 	updateParams();
@@ -74,27 +80,69 @@ Geofence::~Geofence()
 }
 
 
-bool Geofence::inside(const struct vehicle_global_position_s *vehicle)
+bool Geofence::inside(const struct vehicle_global_position_s &global_position)
 {
-	double lat = vehicle->lat / 1e7d;
-	double lon = vehicle->lon / 1e7d;
-	//float	alt = vehicle->alt;
+	return inside(global_position.lat, global_position.lon, global_position.alt);
+}
 
-	return inside(lat, lon, vehicle->alt);
+bool Geofence::inside(const struct vehicle_global_position_s &global_position, float baro_altitude_amsl)
+{
+	return inside(global_position.lat, global_position.lon, baro_altitude_amsl);
+}
+
+
+bool Geofence::inside(const struct vehicle_global_position_s &global_position,
+			const struct vehicle_gps_position_s &gps_position,float baro_altitude_amsl) {
+	updateParams();
+
+	if (getAltitudeMode() == Geofence::GF_ALT_MODE_WGS84) {
+		if (getSource() == Geofence::GF_SOURCE_GLOBALPOS) {
+			return inside(global_position);
+		} else {
+			return inside((double)gps_position.lat * 1.0e-7, (double)gps_position.lon * 1.0e-7,
+					(double)gps_position.alt * 1.0e-3);
+		}
+	} else {
+		if (getSource() == Geofence::GF_SOURCE_GLOBALPOS) {
+			return inside(global_position, baro_altitude_amsl);
+		} else {
+			return inside((double)gps_position.lat * 1.0e-7, (double)gps_position.lon * 1.0e-7,
+					baro_altitude_amsl);
+		}
+	}
 }
 
 bool Geofence::inside(double lat, double lon, float altitude)
 {
+	bool inside_fence = inside_polygon(lat, lon, altitude);
+
+	if (inside_fence) {
+		_outside_counter = 0;
+		return inside_fence;
+	} {
+		_outside_counter++;
+		if(_outside_counter > _param_counter_threshold.get()) {
+			return inside_fence;
+		} else {
+			return true;
+		}
+	}
+}
+
+
+bool Geofence::inside_polygon(double lat, double lon, float altitude)
+{
 	/* Return true if geofence is disabled */
-	if (param_geofence_on.get() != 1)
+	if (_param_geofence_on.get() != 1)
 		return true;
 
 	if (valid()) {
 
 		if (!isEmpty()) {
 			/* Vertical check */
-			if (altitude > _altitude_max || altitude < _altitude_min)
+			if (altitude > _altitude_max || altitude < _altitude_min) {
 				return false;
+			}
 
 			/*Horizontal check */
 			/* Adaptation of algorithm originally presented as
@@ -231,8 +279,14 @@ Geofence::loadFromFile(const char *filename)
 		while((textStart < sizeof(line)/sizeof(char)) && isspace(line[textStart])) textStart++;
 
 		/* if the line starts with #, skip */
-		if (line[textStart] == commentChar)
+		if (line[textStart] == commentChar) {
 			continue;
+		}
+
+		/* if there is only a linefeed, skip it */
+		if (line[0] == '\n') {
+			continue;
+		}
 
 		if (gotVertical) {
 			/* Parse the line as a geofence point */
@@ -243,8 +297,10 @@ Geofence::loadFromFile(const char *filename)
 				/* Handle degree minute second format */
 				float lat_d, lat_m, lat_s, lon_d, lon_m, lon_s;
 
-				if (sscanf(line, "DMS %f %f %f %f %f %f", &lat_d, &lat_m, &lat_s, &lon_d, &lon_m, &lon_s) != 6)
+				if (sscanf(line, "DMS %f %f %f %f %f %f", &lat_d, &lat_m, &lat_s, &lon_d, &lon_m, &lon_s) != 6) {
+					warnx("Scanf to parse DMS geofence vertex failed.");
 					return ERROR;
+				}
 
 //				warnx("Geofence DMS: %.5f %.5f %.5f ; %.5f %.5f %.5f", (double)lat_d, (double)lat_m, (double)lat_s, (double)lon_d, (double)lon_m, (double)lon_s);
 
@@ -253,9 +309,10 @@ Geofence::loadFromFile(const char *filename)
 
 			} else {
 				/* Handle decimal degree format */
-
-				if (sscanf(line, "%f %f", &(vertex.lat), &(vertex.lon)) != 2)
+				if (sscanf(line, "%f %f", &(vertex.lat), &(vertex.lon)) != 2) {
+					warnx("Scanf to parse geofence vertex failed.");
 					return ERROR;
+				}
 			}
 
 			if (dm_write(DM_KEY_FENCE_POINTS, pointCounter, DM_PERSIST_POWER_ON_RESET, &vertex, sizeof(vertex)) != sizeof(vertex))
@@ -284,8 +341,10 @@ Geofence::loadFromFile(const char *filename)
 	{
 		_verticesCount = pointCounter;
 		warnx("Geofence: imported successfully");
+		mavlink_log_info(_mavlinkFd, "Geofence imported");
 	} else {
 		warnx("Geofence: import error");
+		mavlink_log_critical(_mavlinkFd, "#audio: Geofence import error");
 	}
 
 	return ERROR;

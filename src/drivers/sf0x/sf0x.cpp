@@ -72,6 +72,8 @@
 
 #include <board_config.h>
 
+#include "sf0x_parser.h"
+
 /* Configuration Constants */
 
 /* oddly, ERROR is not defined for c++ */
@@ -88,7 +90,9 @@ static const int ERROR = -1;
 #define SF0X_TAKE_RANGE_REG		'd'
 #define SF02F_MIN_DISTANCE		0.0f
 #define SF02F_MAX_DISTANCE		40.0f
-#define SF0X_DEFAULT_PORT		"/dev/ttyS2"
+
+// designated SERIAL4/5 on Pixhawk
+#define SF0X_DEFAULT_PORT		"/dev/ttyS6"
 
 class SF0X : public device::CDev
 {
@@ -120,6 +124,7 @@ private:
 	int				_fd;
 	char				_linebuf[10];
 	unsigned			_linebuf_index;
+	enum SF0X_PARSE_STATE		_parse_state;
 	hrt_abstime			_last_read;
 
 	orb_advert_t			_range_finder_topic;
@@ -186,6 +191,7 @@ SF0X::SF0X(const char *port) :
 	_collect_phase(false),
 	_fd(-1),
 	_linebuf_index(0),
+	_parse_state(SF0X_PARSE_STATE0_UNSYNC),
 	_last_read(0),
 	_range_finder_topic(-1),
 	_consecutive_fail_count(0),
@@ -199,12 +205,6 @@ SF0X::SF0X(const char *port) :
 	if (_fd < 0) {
 		warnx("FAIL: laser fd");
 	}
-
-	/* tell it to stop auto-triggering */
-	char stop_auto = ' ';
-	(void)::write(_fd, &stop_auto, 1);
-	usleep(100);
-	(void)::write(_fd, &stop_auto, 1);
 
 	struct termios uart_config;
 
@@ -520,22 +520,15 @@ SF0X::collect()
 	/* clear buffer if last read was too long ago */
 	uint64_t read_elapsed = hrt_elapsed_time(&_last_read);
 
-	if (read_elapsed > (SF0X_CONVERSION_INTERVAL * 2)) {
-		_linebuf_index = 0;
-	} else if (_linebuf_index > 0) {
-		/* increment to next read position */
-		_linebuf_index++;
-	}
-
 	/* the buffer for read chars is buflen minus null termination */
-	unsigned readlen = sizeof(_linebuf) - 1;
+	char readbuf[sizeof(_linebuf)];
+	unsigned readlen = sizeof(readbuf) - 1;
 
 	/* read from the sensor (uart buffer) */
-	ret = ::read(_fd, &_linebuf[_linebuf_index], readlen - _linebuf_index);
+	ret = ::read(_fd, &readbuf[0], readlen);
 
 	if (ret < 0) {
-		_linebuf[sizeof(_linebuf) - 1] = '\0';
-		debug("read err: %d lbi: %d buf: %s", ret, (int)_linebuf_index, _linebuf);
+		debug("read err: %d", ret);
 		perf_count(_comms_errors);
 		perf_end(_sample_perf);
 
@@ -550,82 +543,22 @@ SF0X::collect()
 		return -EAGAIN;
 	}
 
-	/* we did increment the index to the next position already, so just add the additional fields */
-	_linebuf_index += (ret - 1);
-
 	_last_read = hrt_absolute_time();
 
-	if (_linebuf_index < 1) {
-		/* we need at least the two end bytes to make sense of this string */
-		return -EAGAIN;
-
-	} else if (_linebuf[_linebuf_index - 1] != '\r' || _linebuf[_linebuf_index] != '\n') {
-
-		if (_linebuf_index >= readlen - 1) {
-			/* we have a full buffer, but no line ending - abort */
-			_linebuf_index = 0;
-			perf_count(_comms_errors);
-			return -ENOMEM;
-		} else {
-			/* incomplete read, reschedule ourselves */
-			return -EAGAIN;
-		}
-	}
-
-	char *end;
 	float si_units;
-	bool valid;
+	bool valid = false;
 
-	/* enforce line ending */
-	unsigned lend = (_linebuf_index < (sizeof(_linebuf) - 1)) ? _linebuf_index : (sizeof(_linebuf) - 1);
-
-	_linebuf[lend] = '\0';
-
-	if (_linebuf[0] == '-' && _linebuf[1] == '-' && _linebuf[2] == '.') {
-		si_units = -1.0f;
-		valid = false;
-
-	} else {
-
-		/* we need to find a dot in the string, as we're missing the meters part else */
-		valid = false;
-
-		/* wipe out partially read content from last cycle(s), check for dot */
-		for (unsigned i = 0; i < (lend - 2); i++) {
-			if (_linebuf[i] == '\n') {
-				char buf[sizeof(_linebuf)];
-				memcpy(buf, &_linebuf[i+1], (lend + 1) - (i + 1));
-				memcpy(_linebuf, buf, (lend + 1) - (i + 1));
-			}
-
-			if (_linebuf[i] == '.') {
-				valid = true;
-			}
-		}
-
-		if (valid) {
-			si_units = strtod(_linebuf, &end);
-
-			/* we require at least 3 characters for a valid number */
-			if (end > _linebuf + 3) {
-				valid = true;
-			} else {
-				si_units = -1.0f;
-				valid = false;
-			}
+	for (int i = 0; i < ret; i++) {
+		if (OK == sf0x_parser(readbuf[i], _linebuf, &_linebuf_index, &_parse_state, &si_units)) {
+			valid = true;
 		}
 	}
 
-	debug("val (float): %8.4f, raw: %s, valid: %s\n", (double)si_units, _linebuf, ((valid) ? "OK" : "NO"));
-
-	/* done with this chunk, resetting - even if invalid */
-	_linebuf_index = 0;
-
-	/* if its invalid, there is no reason to forward the value */
 	if (!valid) {
-		perf_count(_comms_errors);
-		return -EINVAL;
+		return -EAGAIN;
 	}
+
+	debug("val (float): %8.4f, raw: %s, valid: %s", (double)si_units, _linebuf, ((valid) ? "OK" : "NO"));
 
 	struct range_finder_report report;
 
@@ -633,6 +566,8 @@ SF0X::collect()
 	report.timestamp = hrt_absolute_time();
 	report.error_count = perf_event_count(_comms_errors);
 	report.distance = si_units;
+	report.minimum_distance = get_minimum_distance();
+	report.maximum_distance = get_maximum_distance();
 	report.valid = valid && (si_units > get_minimum_distance() && si_units < get_maximum_distance() ? 1 : 0);
 
 	/* publish it */
@@ -708,12 +643,12 @@ SF0X::cycle()
 		int collect_ret = collect();
 
 		if (collect_ret == -EAGAIN) {
-			/* reschedule to grab the missing bits, time to transmit 10 bytes @9600 bps */
+			/* reschedule to grab the missing bits, time to transmit 8 bytes @ 9600 bps */
 			work_queue(HPWORK,
 				   &_work,
 				   (worker_t)&SF0X::cycle_trampoline,
 				   this,
-				   USEC2TICK(1100));
+				   USEC2TICK(1042 * 8));
 			return;
 		}
 

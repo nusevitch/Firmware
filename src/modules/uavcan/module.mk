@@ -40,15 +40,24 @@ MODULE_COMMAND = uavcan
 
 MAXOPTIMIZATION = -Os
 
-SRCS += uavcan_main.cpp         \
-        uavcan_clock.cpp        \
-        esc_controller.cpp      \
-        gnss_receiver.cpp
+# Main
+SRCS += uavcan_main.cpp              \
+        uavcan_clock.cpp             \
+        uavcan_params.c
+
+# Actuators
+SRCS += actuators/esc.cpp
+
+# Sensors
+SRCS += sensors/sensor_bridge.cpp   \
+        sensors/gnss.cpp            \
+        sensors/mag.cpp             \
+        sensors/baro.cpp
 
 #
 # libuavcan
 #
-include $(UAVCAN_DIR)/libuavcan/include.mk
+include $(PX4_LIB_DIR)/uavcan/libuavcan/include.mk
 SRCS += $(LIBUAVCAN_SRC)
 INCLUDE_DIRS += $(LIBUAVCAN_INC)
 # Since actual compiler mode is C++11, the library will default to UAVCAN_CPP11, but it will fail to compile
@@ -58,17 +67,13 @@ override EXTRADEFINES := $(EXTRADEFINES) -DUAVCAN_CPP_VERSION=UAVCAN_CPP03 -DUAV
 #
 # libuavcan drivers for STM32
 #
-include $(UAVCAN_DIR)/libuavcan_drivers/stm32/driver/include.mk
+include $(PX4_LIB_DIR)/uavcan/libuavcan_drivers/stm32/driver/include.mk
 SRCS += $(LIBUAVCAN_STM32_SRC)
 INCLUDE_DIRS += $(LIBUAVCAN_STM32_INC)
 override EXTRADEFINES := $(EXTRADEFINES) -DUAVCAN_STM32_NUTTX -DUAVCAN_STM32_NUM_IFACES=2
 
 #
 # Invoke DSDL compiler
-# TODO: Add make target for this, or invoke dsdlc manually.
-#       The second option assumes that the generated headers shall be saved
-#       under the version control, which may be undesirable.
-#       The first option requires any Python and the Python Mako library for the sources to be built.
 #
 $(info $(shell $(LIBUAVCAN_DSDLC) $(UAVCAN_DSDL_DIR)))
 INCLUDE_DIRS += dsdlc_generated

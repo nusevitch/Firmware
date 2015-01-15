@@ -50,11 +50,11 @@ OBJDUMP			 = $(CROSSDEV)objdump
 
 # Check if the right version of the toolchain is available
 #
-CROSSDEV_VER_SUPPORTED	 = 4.7
+CROSSDEV_VER_SUPPORTED	 = 4.7.4 4.7.5 4.7.6 4.8.4
 CROSSDEV_VER_FOUND	 = $(shell $(CC) -dumpversion)
 
-ifeq (,$(findstring $(CROSSDEV_VER_SUPPORTED),$(CROSSDEV_VER_FOUND)))
-$(error Unsupported version of $(CC), found: $(CROSSDEV_VER_FOUND) instead of $(CROSSDEV_VER_SUPPORTED).x)
+ifeq (,$(findstring $(CROSSDEV_VER_FOUND), $(CROSSDEV_VER_SUPPORTED)))
+$(error Unsupported version of $(CC), found: $(CROSSDEV_VER_FOUND) instead of one in: $(CROSSDEV_VER_SUPPORTED))
 endif
 
 
@@ -109,10 +109,10 @@ ARCHOPTIMIZATION	 = $(MAXOPTIMIZATION) \
 			   -fno-strict-aliasing \
 			   -fno-strength-reduce \
 			   -fomit-frame-pointer \
-   			   -funsafe-math-optimizations \
-   			   -fno-builtin-printf \
-   			   -ffunction-sections \
-   			   -fdata-sections
+			   -funsafe-math-optimizations \
+			   -fno-builtin-printf \
+			   -ffunction-sections \
+			   -fdata-sections
 
 # enable precise stack overflow tracking
 # note - requires corresponding support in NuttX
@@ -127,6 +127,7 @@ ARCHCXXFLAGS		 = -fno-exceptions -fno-rtti -std=gnu++0x -fno-threadsafe-statics
 #
 ARCHWARNINGS		 = -Wall \
 			   -Wextra \
+			   -Werror \
 			   -Wdouble-promotion \
 			   -Wshadow \
 			   -Wfloat-equal \
@@ -227,7 +228,7 @@ DEP_INCLUDES		 = $(subst .o,.d,$(OBJS))
 define COMPILE
 	@$(ECHO) "CC:      $1"
 	@$(MKDIR) -p $(dir $2)
-	$(Q) $(CC) -MD -c $(CFLAGS) $(abspath $1) -o $2
+	$(Q) $(CCACHE) $(CC) -MD -c $(CFLAGS) $(abspath $1) -o $2
 endef
 
 # Compile C++ source $1 to $2
@@ -236,7 +237,7 @@ endef
 define COMPILEXX
 	@$(ECHO) "CXX:     $1"
 	@$(MKDIR) -p $(dir $2)
-	$(Q) $(CXX) -MD -c $(CXXFLAGS) $(abspath $1) -o $2
+	$(Q) $(CCACHE) $(CXX) -MD -c $(CXXFLAGS) $(abspath $1) -o $2
 endef
 
 # Assemble $1 into $2

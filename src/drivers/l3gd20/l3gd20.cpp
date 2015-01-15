@@ -142,6 +142,7 @@ static const int ERROR = -1;
 #define ADDR_INT1_TSH_ZH		0x36
 #define ADDR_INT1_TSH_ZL		0x37
 #define ADDR_INT1_DURATION		0x38
+#define ADDR_LOW_ODR			0x39
 
 
 /* Internal configuration values */
@@ -176,6 +177,7 @@ static const int ERROR = -1;
 #define L3G4200D_DEFAULT_RATE			800
 #define L3GD20_DEFAULT_RANGE_DPS		2000
 #define L3GD20_DEFAULT_FILTER_FREQ		30
+#define L3GD20_TEMP_OFFSET_CELSIUS		40
 
 #ifndef SENSOR_BOARD_ROTATION_DEFAULT
 #define SENSOR_BOARD_ROTATION_DEFAULT		SENSOR_BOARD_ROTATION_270_DEG
@@ -198,6 +200,12 @@ public:
 	 * Diagnostics - print some basic information about the driver.
 	 */
 	void			print_info();
+
+	// print register dump
+	void			print_registers();
+
+	// trigger an error
+	void			test_error();
 
 protected:
 	virtual int		probe();
@@ -224,6 +232,9 @@ private:
 	perf_counter_t		_sample_perf;
 	perf_counter_t		_reschedules;
 	perf_counter_t		_errors;
+	perf_counter_t		_bad_registers;
+
+	uint8_t			_register_wait;
 
 	math::LowPassFilter2p	_gyro_filter_x;
 	math::LowPassFilter2p	_gyro_filter_y;
@@ -233,6 +244,14 @@ private:
 	bool	_is_l3g4200d;
 
 	enum Rotation		_rotation;
+
+	// this is used to support runtime checking of key
+	// configuration registers to detect SPI bus errors and sensor
+	// reset
+#define L3GD20_NUM_CHECKED_REGISTERS 8
+	static const uint8_t	_checked_registers[L3GD20_NUM_CHECKED_REGISTERS];
+	uint8_t			_checked_values[L3GD20_NUM_CHECKED_REGISTERS];
+	uint8_t			_checked_next;
 
 	/**
 	 * Start automatic measurement.
@@ -266,6 +285,11 @@ private:
 	static void		measure_trampoline(void *arg);
 
 	/**
+	 * check key registers for correct values
+	 */
+	void			check_registers(void);
+
+	/**
 	 * Fetch measurements from the sensor and update the report ring.
 	 */
 	void			measure();
@@ -296,6 +320,14 @@ private:
 	 * @param setbits	Bits in the register to set.
 	 */
 	void			modify_reg(unsigned reg, uint8_t clearbits, uint8_t setbits);
+
+	/**
+	 * Write a register in the L3GD20, updating _checked_values
+	 *
+	 * @param reg		The register to write.
+	 * @param value		The new value to write.
+	 */
+	void			write_checked_reg(unsigned reg, uint8_t value);
 
 	/**
 	 * Set the L3GD20 measurement range.
@@ -337,6 +369,19 @@ private:
 	L3GD20 operator=(const L3GD20&);
 };
 
+/*
+  list of registers that will be checked in check_registers(). Note
+  that ADDR_WHO_AM_I must be first in the list.
+ */
+const uint8_t L3GD20::_checked_registers[L3GD20_NUM_CHECKED_REGISTERS] = { ADDR_WHO_AM_I,
+                                                                           ADDR_CTRL_REG1,
+                                                                           ADDR_CTRL_REG2,
+                                                                           ADDR_CTRL_REG3,
+                                                                           ADDR_CTRL_REG4,
+                                                                           ADDR_CTRL_REG5,
+                                                                           ADDR_FIFO_CTRL_REG,
+									   ADDR_LOW_ODR };
+
 L3GD20::L3GD20(int bus, const char* path, spi_dev_e device, enum Rotation rotation) :
 	SPI("L3GD20", path, bus, device, SPIDEV_MODE3, 11*1000*1000 /* will be rounded to 10.4 MHz, within margins for L3GD20 */),
 	_call{},
@@ -354,11 +399,14 @@ L3GD20::L3GD20(int bus, const char* path, spi_dev_e device, enum Rotation rotati
 	_sample_perf(perf_alloc(PC_ELAPSED, "l3gd20_read")),
 	_reschedules(perf_alloc(PC_COUNT, "l3gd20_reschedules")),
 	_errors(perf_alloc(PC_COUNT, "l3gd20_errors")),
+	_bad_registers(perf_alloc(PC_COUNT, "l3gd20_bad_registers")),
+	_register_wait(0),
 	_gyro_filter_x(L3GD20_DEFAULT_RATE, L3GD20_DEFAULT_FILTER_FREQ),
 	_gyro_filter_y(L3GD20_DEFAULT_RATE, L3GD20_DEFAULT_FILTER_FREQ),
 	_gyro_filter_z(L3GD20_DEFAULT_RATE, L3GD20_DEFAULT_FILTER_FREQ),
 	_is_l3g4200d(false),
-        _rotation(rotation)                                            
+	_rotation(rotation),
+	_checked_next(0)
 {
 	// enable debug() calls
 	_debug_enabled = true;
@@ -388,6 +436,7 @@ L3GD20::~L3GD20()
 	perf_free(_sample_perf);
 	perf_free(_reschedules);
 	perf_free(_errors);
+	perf_free(_bad_registers);
 }
 
 int
@@ -447,29 +496,27 @@ L3GD20::probe()
 	(void)read_reg(ADDR_WHO_AM_I);
 
 	bool success = false;
+	uint8_t v = 0;
 
-	/* verify that the device is attached and functioning, accept L3GD20 and L3GD20H */
-	if (read_reg(ADDR_WHO_AM_I) == WHO_I_AM) {
-
+	/* verify that the device is attached and functioning, accept
+	 * L3GD20, L3GD20H and L3G4200D */
+	if ((v=read_reg(ADDR_WHO_AM_I)) == WHO_I_AM) {
 		_orientation = SENSOR_BOARD_ROTATION_DEFAULT;
 		success = true;
-	}
-
-
-	if (read_reg(ADDR_WHO_AM_I) == WHO_I_AM_H) {
+	} else if ((v=read_reg(ADDR_WHO_AM_I)) == WHO_I_AM_H) {
 		_orientation = SENSOR_BOARD_ROTATION_180_DEG;
 		success = true;
-	}
-
-	/* Detect the L3G4200D used on AeroCore */
-	if (read_reg(ADDR_WHO_AM_I) == WHO_I_AM_L3G4200D) {
+	} else if ((v=read_reg(ADDR_WHO_AM_I)) == WHO_I_AM_L3G4200D) {
+		/* Detect the L3G4200D used on AeroCore */
 		_is_l3g4200d = true;
 		_orientation = SENSOR_BOARD_ROTATION_DEFAULT;
 		success = true;
 	}
 
-	if (success)
+	if (success) {
+		_checked_values[0] = v;
 		return OK;
+	}
 
 	return -EIO;
 }
@@ -672,6 +719,18 @@ L3GD20::write_reg(unsigned reg, uint8_t value)
 }
 
 void
+L3GD20::write_checked_reg(unsigned reg, uint8_t value)
+{
+	write_reg(reg, value);
+	for (uint8_t i=0; i<L3GD20_NUM_CHECKED_REGISTERS; i++) {
+		if (reg == _checked_registers[i]) {
+			_checked_values[i] = value;
+		}
+	}
+}
+
+
+void
 L3GD20::modify_reg(unsigned reg, uint8_t clearbits, uint8_t setbits)
 {
 	uint8_t	val;
@@ -679,7 +738,7 @@ L3GD20::modify_reg(unsigned reg, uint8_t clearbits, uint8_t setbits)
 	val = read_reg(reg);
 	val &= ~clearbits;
 	val |= setbits;
-	write_reg(reg, val);
+	write_checked_reg(reg, val);
 }
 
 int
@@ -713,7 +772,7 @@ L3GD20::set_range(unsigned max_dps)
 
 	_gyro_range_rad_s = new_range / 180.0f * M_PI_F;
 	_gyro_range_scale = new_range_scale_dps_digit / 180.0f * M_PI_F;
-	write_reg(ADDR_CTRL_REG4, bits);
+	write_checked_reg(ADDR_CTRL_REG4, bits);
 
 	return OK;
 }
@@ -749,7 +808,7 @@ L3GD20::set_samplerate(unsigned frequency)
 		return -EINVAL;
 	}
 
-	write_reg(ADDR_CTRL_REG1, bits);
+	write_checked_reg(ADDR_CTRL_REG1, bits);
 
 	return OK;
 }
@@ -790,6 +849,11 @@ L3GD20::disable_i2c(void)
 		uint8_t a = read_reg(0x05);
 		write_reg(0x05, (0x20 | a));
 		if (read_reg(0x05) == (a | 0x20)) {
+			// this sets the I2C_DIS bit on the
+			// L3GD20H. The l3gd20 datasheet doesn't
+			// mention this register, but it does seem to
+			// accept it.
+			write_checked_reg(ADDR_LOW_ODR, 0x08);
 			return;
 		}
 	}
@@ -803,18 +867,18 @@ L3GD20::reset()
 	disable_i2c();
 
 	/* set default configuration */
-	write_reg(ADDR_CTRL_REG1, REG1_POWER_NORMAL | REG1_Z_ENABLE | REG1_Y_ENABLE | REG1_X_ENABLE);
-	write_reg(ADDR_CTRL_REG2, 0);		/* disable high-pass filters */
-	write_reg(ADDR_CTRL_REG3, 0x08);        /* DRDY enable */
-	write_reg(ADDR_CTRL_REG4, REG4_BDU);
-	write_reg(ADDR_CTRL_REG5, 0);
-
-	write_reg(ADDR_CTRL_REG5, REG5_FIFO_ENABLE);		/* disable wake-on-interrupt */
+	write_checked_reg(ADDR_CTRL_REG1, 
+                          REG1_POWER_NORMAL | REG1_Z_ENABLE | REG1_Y_ENABLE | REG1_X_ENABLE);
+	write_checked_reg(ADDR_CTRL_REG2, 0);		/* disable high-pass filters */
+	write_checked_reg(ADDR_CTRL_REG3, 0x08);        /* DRDY enable */
+	write_checked_reg(ADDR_CTRL_REG4, REG4_BDU);
+	write_checked_reg(ADDR_CTRL_REG5, 0);
+	write_checked_reg(ADDR_CTRL_REG5, REG5_FIFO_ENABLE);		/* disable wake-on-interrupt */
 
 	/* disable FIFO. This makes things simpler and ensures we
 	 * aren't getting stale data. It means we must run the hrt
 	 * callback fast enough to not miss data. */
-	write_reg(ADDR_FIFO_CTRL_REG, FIFO_CTRL_BYPASS_MODE);
+	write_checked_reg(ADDR_FIFO_CTRL_REG, FIFO_CTRL_BYPASS_MODE);
 
 	set_samplerate(0); // 760Hz or 800Hz
 	set_range(L3GD20_DEFAULT_RANGE_DPS);
@@ -839,24 +903,40 @@ L3GD20::measure_trampoline(void *arg)
 #endif
 
 void
+L3GD20::check_registers(void)
+{
+	uint8_t v;
+	if ((v=read_reg(_checked_registers[_checked_next])) != _checked_values[_checked_next]) {
+		/*
+		  if we get the wrong value then we know the SPI bus
+		  or sensor is very sick. We set _register_wait to 20
+		  and wait until we have seen 20 good values in a row
+		  before we consider the sensor to be OK again. 
+		 */
+		perf_count(_bad_registers);
+
+		/*
+		  try to fix the bad register value. We only try to
+		  fix one per loop to prevent a bad sensor hogging the
+		  bus. We skip zero as that is the WHO_AM_I, which
+		  is not writeable
+		 */
+		if (_checked_next != 0) {
+			write_reg(_checked_registers[_checked_next], _checked_values[_checked_next]);
+		}
+		_register_wait = 20;
+        }
+        _checked_next = (_checked_next+1) % L3GD20_NUM_CHECKED_REGISTERS;
+}
+
+void
 L3GD20::measure()
 {
-#if L3GD20_USE_DRDY
-	// if the gyro doesn't have any data ready then re-schedule
-	// for 100 microseconds later. This ensures we don't double
-	// read a value and then miss the next value
-	if (_bus == PX4_SPI_BUS_SENSORS && stm32_gpioread(GPIO_EXTI_GYRO_DRDY) == 0) {
-		perf_count(_reschedules);
-		hrt_call_delay(&_call, 100);
-		return;
-	}
-#endif
-
 	/* status register and data as read back from the device */
 #pragma pack(push, 1)
 	struct {
 		uint8_t		cmd;
-		uint8_t		temp;
+		int8_t		temp;
 		uint8_t		status;
 		int16_t		x;
 		int16_t		y;
@@ -868,6 +948,20 @@ L3GD20::measure()
 
 	/* start the performance counter */
 	perf_begin(_sample_perf);
+
+        check_registers();
+
+#if L3GD20_USE_DRDY
+	// if the gyro doesn't have any data ready then re-schedule
+	// for 100 microseconds later. This ensures we don't double
+	// read a value and then miss the next value
+	if (_bus == PX4_SPI_BUS_SENSORS && stm32_gpioread(GPIO_EXTI_GYRO_DRDY) == 0) {
+		perf_count(_reschedules);
+		hrt_call_delay(&_call, 100);
+                perf_end(_sample_perf);
+		return;
+	}
+#endif
 
 	/* fetch data from the sensor */
 	memset(&raw_report, 0, sizeof(raw_report));
@@ -899,7 +993,7 @@ L3GD20::measure()
 	 *		  74 from all measurements centers them around zero.
 	 */
 	report.timestamp = hrt_absolute_time();
-        report.error_count = 0; // not recorded
+        report.error_count = perf_event_count(_bad_registers);
 	
 	switch (_orientation) {
 
@@ -930,6 +1024,8 @@ L3GD20::measure()
 
 	report.z_raw = raw_report.z;
 
+	report.temperature_raw = raw_report.temp;
+
 	report.x = ((report.x_raw * _gyro_range_scale) - _gyro_scale.x_offset) * _gyro_scale.x_scale;
 	report.y = ((report.y_raw * _gyro_range_scale) - _gyro_scale.y_offset) * _gyro_scale.y_scale;
 	report.z = ((report.z_raw * _gyro_range_scale) - _gyro_scale.z_offset) * _gyro_scale.z_scale;
@@ -937,6 +1033,8 @@ L3GD20::measure()
 	report.x = _gyro_filter_x.apply(report.x);
 	report.y = _gyro_filter_y.apply(report.y);
 	report.z = _gyro_filter_z.apply(report.z);
+
+	report.temperature = L3GD20_TEMP_OFFSET_CELSIUS - raw_report.temp;
 
 	// apply user specified rotation
 	rotate_3f(_rotation, report.x, report.y, report.z);
@@ -968,7 +1066,39 @@ L3GD20::print_info()
 	perf_print_counter(_sample_perf);
 	perf_print_counter(_reschedules);
 	perf_print_counter(_errors);
+	perf_print_counter(_bad_registers);
 	_reports->print_info("report queue");
+        ::printf("checked_next: %u\n", _checked_next);
+        for (uint8_t i=0; i<L3GD20_NUM_CHECKED_REGISTERS; i++) {
+            uint8_t v = read_reg(_checked_registers[i]);
+            if (v != _checked_values[i]) {
+                ::printf("reg %02x:%02x should be %02x\n", 
+                         (unsigned)_checked_registers[i],
+                         (unsigned)v,
+                         (unsigned)_checked_values[i]);
+            }
+        }
+}
+
+void
+L3GD20::print_registers()
+{
+	printf("L3GD20 registers\n");
+	for (uint8_t reg=0; reg<=0x40; reg++) {
+		uint8_t v = read_reg(reg);
+		printf("%02x:%02x ",(unsigned)reg, (unsigned)v);
+		if ((reg+1) % 16 == 0) {
+			printf("\n");
+		}
+	}
+	printf("\n");
+}
+
+void
+L3GD20::test_error()
+{
+	// trigger a deliberate error
+        write_reg(ADDR_CTRL_REG3, 0);
 }
 
 int
@@ -1006,6 +1136,8 @@ void	start(bool external_bus, enum Rotation rotation);
 void	test();
 void	reset();
 void	info();
+void	regdump();
+void	test_error();
 
 /**
  * Start the driver.
@@ -1091,9 +1223,11 @@ test()
 	warnx("gyro x: \t% 9.5f\trad/s", (double)g_report.x);
 	warnx("gyro y: \t% 9.5f\trad/s", (double)g_report.y);
 	warnx("gyro z: \t% 9.5f\trad/s", (double)g_report.z);
+	warnx("temp: \t%d\tC", (int)g_report.temperature);
 	warnx("gyro x: \t%d\traw", (int)g_report.x_raw);
 	warnx("gyro y: \t%d\traw", (int)g_report.y_raw);
 	warnx("gyro z: \t%d\traw", (int)g_report.z_raw);
+	warnx("temp: \t%d\traw", (int)g_report.temperature_raw);
 	warnx("gyro range: %8.4f rad/s (%d deg/s)", (double)g_report.range_rad_s,
 	      (int)((g_report.range_rad_s / M_PI_F) * 180.0f + 0.5f));
 
@@ -1142,10 +1276,40 @@ info()
 	exit(0);
 }
 
+/**
+ * Dump the register information
+ */
+void
+regdump(void)
+{
+	if (g_dev == nullptr)
+		errx(1, "driver not running");
+
+	printf("regdump @ %p\n", g_dev);
+	g_dev->print_registers();
+
+	exit(0);
+}
+
+/**
+ * trigger an error
+ */
+void
+test_error(void)
+{
+	if (g_dev == nullptr)
+		errx(1, "driver not running");
+
+	printf("regdump @ %p\n", g_dev);
+	g_dev->test_error();
+
+	exit(0);
+}
+
 void
 usage()
 {
-	warnx("missing command: try 'start', 'info', 'test', 'reset'");
+	warnx("missing command: try 'start', 'info', 'test', 'reset', 'testerror' or 'regdump'");
 	warnx("options:");
 	warnx("    -X    (external bus)");
 	warnx("    -R rotation");
@@ -1202,5 +1366,17 @@ l3gd20_main(int argc, char *argv[])
 	if (!strcmp(verb, "info"))
 		l3gd20::info();
 
-	errx(1, "unrecognized command, try 'start', 'test', 'reset' or 'info'");
+	/*
+	 * Print register information.
+	 */
+	if (!strcmp(verb, "regdump"))
+		l3gd20::regdump();
+
+	/*
+	 * trigger an error
+	 */
+	if (!strcmp(verb, "testerror"))
+		l3gd20::test_error();
+
+	errx(1, "unrecognized command, try 'start', 'test', 'reset', 'info', 'testerror' or 'regdump'");
 }
