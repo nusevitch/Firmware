@@ -10,3 +10,6 @@
 [submodule "unittests/gtest"]
 	path = unittests/gtest
 	url = https://github.com/sjwilks/gtest.git
+[submodule "mavlink/include/mavlink/vJager"]
+	path = mavlink/include/mavlink/vJager
+	url = https://github.com/adrnp/jager_c_mavlink_library.git
