@@ -35,6 +35,10 @@
  * @file mc_att_control_main.cpp
  * Multicopter attitude controller.
  *
+ * Publication for the desired attitude tracking:
+ * Daniel Mellinger and Vijay Kumar. Minimum Snap Trajectory Generation and Control for Quadrotors.
+ * Int. Conf. on Robotics and Automation, Shanghai, China, May 2011.
+ *
  * @author Tobias Naegeli <naegelit@student.ethz.ch>
  * @author Lorenz Meier <lm@inf.ethz.ch>
  * @author Anton Babushkin <anton.babushkin@me.com>
@@ -63,7 +67,11 @@
 #include <uORB/topics/vehicle_attitude_setpoint.h>
 #include <uORB/topics/manual_control_setpoint.h>
 #include <uORB/topics/actuator_controls.h>
+#include <uORB/topics/actuator_controls_virtual_fw.h>
+#include <uORB/topics/actuator_controls_virtual_mc.h>
 #include <uORB/topics/vehicle_rates_setpoint.h>
+#include <uORB/topics/fw_virtual_rates_setpoint.h>
+#include <uORB/topics/mc_virtual_rates_setpoint.h>
 #include <uORB/topics/vehicle_attitude.h>
 #include <uORB/topics/vehicle_control_mode.h>
 #include <uORB/topics/vehicle_status.h>
@@ -141,6 +149,7 @@ private:
 	struct vehicle_status_s				_vehicle_status;	/**< vehicle status */
 
 	perf_counter_t	_loop_perf;			/**< loop performance counter */
+	perf_counter_t	_controller_latency_perf;
 
 	math::Vector<3>		_rates_prev;	/**< angular rates on previous step */
 	math::Vector<3>		_rates_sp;		/**< angular rates setpoint */
@@ -289,7 +298,8 @@ MulticopterAttitudeControl::MulticopterAttitudeControl() :
 	_actuators_0_circuit_breaker_enabled(false),
 
 /* performance counters */
-	_loop_perf(perf_alloc(PC_ELAPSED, "mc_att_control"))
+	_loop_perf(perf_alloc(PC_ELAPSED, "mc_att_control")),
+	_controller_latency_perf(perf_alloc_once(PC_ELAPSED, "ctrl_latency"))
 
 {
 	memset(&_v_att, 0, sizeof(_v_att));
@@ -613,14 +623,14 @@ MulticopterAttitudeControl::control_attitude(float dt)
 
 	if (_v_att_sp.R_valid) {
 		/* rotation matrix in _att_sp is valid, use it */
-		R_sp.set(&_v_att_sp.R_body[0][0]);
+		R_sp.set(&_v_att_sp.R_body[0]);
 
 	} else {
 		/* rotation matrix in _att_sp is not valid, use euler angles instead */
 		R_sp.from_euler(_v_att_sp.roll_body, _v_att_sp.pitch_body, _v_att_sp.yaw_body);
 
 		/* copy rotation matrix back to setpoint struct */
-		memcpy(&_v_att_sp.R_body[0][0], &R_sp.data[0][0], sizeof(_v_att_sp.R_body));
+		memcpy(&_v_att_sp.R_body[0], &R_sp.data[0], sizeof(_v_att_sp.R_body));
 		_v_att_sp.R_valid = true;
 	}
 
@@ -886,10 +896,12 @@ MulticopterAttitudeControl::task_main()
 				_actuators.control[2] = (isfinite(_att_control(2))) ? _att_control(2) : 0.0f;
 				_actuators.control[3] = (isfinite(_thrust_sp)) ? _thrust_sp : 0.0f;
 				_actuators.timestamp = hrt_absolute_time();
+				_actuators.timestamp_sample = _v_att.timestamp;
 
 				if (!_actuators_0_circuit_breaker_enabled) {
 					if (_actuators_0_pub > 0) {
 						orb_publish(_actuators_id, _actuators_0_pub, &_actuators);
+						perf_end(_controller_latency_perf);
 
 					} else if (_actuators_id) {
 						_actuators_0_pub = orb_advertise(_actuators_id, &_actuators);

@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (c) 2013 PX4 Development Team. All rights reserved.
+ *   Copyright (c) 2013-2015 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -159,6 +159,7 @@ int calculate_calibration_values(float accel_ref[6][3], float accel_T[3][3], flo
 int do_accel_calibration(int mavlink_fd)
 {
 	int fd;
+	int32_t device_id;
 
 	mavlink_log_info(mavlink_fd, CAL_STARTED_MSG, sensor_name);
 
@@ -180,6 +181,9 @@ int do_accel_calibration(int mavlink_fd)
 
 	/* reset all offsets to zero and all scales to one */
 	fd = open(ACCEL_DEVICE_PATH, 0);
+
+	device_id = ioctl(fd, DEVIOCGDEVICEID, 0);
+
 	res = ioctl(fd, ACCELIOCSSCALE, (long unsigned int)&accel_scale);
 	close(fd);
 
@@ -217,14 +221,18 @@ int do_accel_calibration(int mavlink_fd)
 		accel_scale.z_scale = accel_T_rotated(2, 2);
 
 		/* set parameters */
-		if (param_set(param_find("SENS_ACC_XOFF"), &(accel_scale.x_offset))
-		    || param_set(param_find("SENS_ACC_YOFF"), &(accel_scale.y_offset))
-		    || param_set(param_find("SENS_ACC_ZOFF"), &(accel_scale.z_offset))
-		    || param_set(param_find("SENS_ACC_XSCALE"), &(accel_scale.x_scale))
-		    || param_set(param_find("SENS_ACC_YSCALE"), &(accel_scale.y_scale))
-		    || param_set(param_find("SENS_ACC_ZSCALE"), &(accel_scale.z_scale))) {
+		if (param_set(param_find("CAL_ACC0_XOFF"), &(accel_scale.x_offset))
+		    || param_set(param_find("CAL_ACC0_YOFF"), &(accel_scale.y_offset))
+		    || param_set(param_find("CAL_ACC0_ZOFF"), &(accel_scale.z_offset))
+		    || param_set(param_find("CAL_ACC0_XSCALE"), &(accel_scale.x_scale))
+		    || param_set(param_find("CAL_ACC0_YSCALE"), &(accel_scale.y_scale))
+		    || param_set(param_find("CAL_ACC0_ZSCALE"), &(accel_scale.z_scale))) {
 			mavlink_log_critical(mavlink_fd, CAL_FAILED_SET_PARAMS_MSG);
 			res = ERROR;
+		}
+
+		if (param_set(param_find("CAL_ACC0_ID"), &(device_id))) {
+				res = ERROR;
 		}
 	}
 

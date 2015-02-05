@@ -92,6 +92,7 @@ MavlinkReceiver::MavlinkReceiver(Mavlink *parent) :
 	_mavlink(parent),
 	status{},
 	hil_local_pos{},
+	hil_land_detector{},
 	_control_mode{},
 	_global_pos_pub(-1),
 	_local_pos_pub(-1),
@@ -118,6 +119,7 @@ MavlinkReceiver::MavlinkReceiver(Mavlink *parent) :
 	_telemetry_status_pub(-1),
 	_rc_pub(-1),
 	_manual_pub(-1),
+	_land_detector_pub(-1),
 	_apnt_gps_status_pub(-1),
 	_apnt_site_status_pub(-1),
 	_tracking_status_pub(-1),
@@ -458,7 +460,7 @@ MavlinkReceiver::handle_message_hil_optical_flow(mavlink_message_t *msg)
 
 	/* Use distance value for range finder report */
 	struct range_finder_report r;
-	memset(&r, 0, sizeof(f));
+	memset(&r, 0, sizeof(r));
 
 	r.timestamp = hrt_absolute_time();
 	r.error_count = 0;
@@ -640,7 +642,7 @@ MavlinkReceiver::handle_message_set_position_target_local_ned(mavlink_message_t 
 					pos_sp_triplet.previous.valid = false;
 					pos_sp_triplet.next.valid = false;
 					pos_sp_triplet.current.valid = true;
-					pos_sp_triplet.current.type = SETPOINT_TYPE_POSITION; //XXX support others
+					pos_sp_triplet.current.type = position_setpoint_s::SETPOINT_TYPE_POSITION; //XXX support others
 
 					/* set the local pos values if the setpoint type is 'local pos' and none
 					 * of the local pos fields is set to 'ignore' */
@@ -822,7 +824,7 @@ MavlinkReceiver::handle_message_set_attitude_target(mavlink_message_t *msg)
 					att_sp.timestamp = hrt_absolute_time();
 					mavlink_quaternion_to_euler(set_attitude_target.q,
 							&att_sp.roll_body, &att_sp.pitch_body, &att_sp.yaw_body);
-					mavlink_quaternion_to_dcm(set_attitude_target.q, att_sp.R_body);
+					mavlink_quaternion_to_dcm(set_attitude_target.q, (float(*)[3])att_sp.R_body);
 					att_sp.R_valid = true;
 					att_sp.thrust = set_attitude_target.thrust;
 					memcpy(att_sp.q_d, set_attitude_target.q, sizeof(att_sp.q_d));
@@ -1009,10 +1011,10 @@ MavlinkReceiver::handle_message_timesync(mavlink_message_t *msg)
 
 	} else if (tsync.tc1 > 0) {
 
-		int64_t offset_ns = (tsync.ts1 + now_ns - tsync.tc1*2)/2 ; 
+		int64_t offset_ns = (tsync.ts1 + now_ns - tsync.tc1*2)/2 ;
 		int64_t dt = _time_offset - offset_ns;
 
-		if (dt > 10000000LL || dt < -10000000LL) { // 10 millisecond skew 
+		if (dt > 10000000LL || dt < -10000000LL) { // 10 millisecond skew
 			_time_offset = offset_ns;
 			warnx("[timesync] Hard setting offset.");
 		} else {
@@ -1066,10 +1068,10 @@ MavlinkReceiver::handle_message_hil_sensor(mavlink_message_t *msg)
 		gyro.temperature = imu.temperature;
 
 		if (_gyro_pub < 0) {
-			_gyro_pub = orb_advertise(ORB_ID(sensor_gyro0), &gyro);
+			_gyro_pub = orb_advertise(ORB_ID(sensor_gyro), &gyro);
 
 		} else {
-			orb_publish(ORB_ID(sensor_gyro0), _gyro_pub, &gyro);
+			orb_publish(ORB_ID(sensor_gyro), _gyro_pub, &gyro);
 		}
 	}
 
@@ -1088,10 +1090,10 @@ MavlinkReceiver::handle_message_hil_sensor(mavlink_message_t *msg)
 		accel.temperature = imu.temperature;
 
 		if (_accel_pub < 0) {
-			_accel_pub = orb_advertise(ORB_ID(sensor_accel0), &accel);
+			_accel_pub = orb_advertise(ORB_ID(sensor_accel), &accel);
 
 		} else {
-			orb_publish(ORB_ID(sensor_accel0), _accel_pub, &accel);
+			orb_publish(ORB_ID(sensor_accel), _accel_pub, &accel);
 		}
 	}
 
@@ -1109,10 +1111,11 @@ MavlinkReceiver::handle_message_hil_sensor(mavlink_message_t *msg)
 		mag.z = imu.zmag;
 
 		if (_mag_pub < 0) {
-			_mag_pub = orb_advertise(ORB_ID(sensor_mag0), &mag);
+			/* publish to the first mag topic */
+			_mag_pub = orb_advertise(ORB_ID(sensor_mag), &mag);
 
 		} else {
-			orb_publish(ORB_ID(sensor_mag0), _mag_pub, &mag);
+			orb_publish(ORB_ID(sensor_mag), _mag_pub, &mag);
 		}
 	}
 
@@ -1127,10 +1130,10 @@ MavlinkReceiver::handle_message_hil_sensor(mavlink_message_t *msg)
 		baro.temperature = imu.temperature;
 
 		if (_baro_pub < 0) {
-			_baro_pub = orb_advertise(ORB_ID(sensor_baro0), &baro);
+			_baro_pub = orb_advertise(ORB_ID(sensor_baro), &baro);
 
 		} else {
-			orb_publish(ORB_ID(sensor_baro0), _baro_pub, &baro);
+			orb_publish(ORB_ID(sensor_baro), _baro_pub, &baro);
 		}
 	}
 
@@ -1378,14 +1381,27 @@ MavlinkReceiver::handle_message_hil_state_quaternion(mavlink_message_t *msg)
 		hil_local_pos.xy_global = true;
 		hil_local_pos.z_global = true;
 
-		bool landed = (float)(hil_state.alt) / 1000.0f < (_hil_local_alt0 + 0.1f); // XXX improve?
-		hil_local_pos.landed = landed;
-
 		if (_local_pos_pub < 0) {
 			_local_pos_pub = orb_advertise(ORB_ID(vehicle_local_position), &hil_local_pos);
 
 		} else {
 			orb_publish(ORB_ID(vehicle_local_position), _local_pos_pub, &hil_local_pos);
+		}
+	}
+
+	/* land detector */
+	{
+		bool landed = (float)(hil_state.alt) / 1000.0f < (_hil_local_alt0 + 0.1f); // XXX improve?
+		if(hil_land_detector.landed != landed) {
+			hil_land_detector.landed = landed;
+			hil_land_detector.timestamp = hrt_absolute_time();
+
+			if (_land_detector_pub < 0) {
+				_land_detector_pub = orb_advertise(ORB_ID(vehicle_land_detected), &hil_land_detector);
+
+			} else {
+				orb_publish(ORB_ID(vehicle_land_detected), _land_detector_pub, &hil_land_detector);
+			}
 		}
 	}
 
@@ -1404,10 +1420,10 @@ MavlinkReceiver::handle_message_hil_state_quaternion(mavlink_message_t *msg)
 		accel.temperature = 25.0f;
 
 		if (_accel_pub < 0) {
-			_accel_pub = orb_advertise(ORB_ID(sensor_accel0), &accel);
+			_accel_pub = orb_advertise(ORB_ID(sensor_accel), &accel);
 
 		} else {
-			orb_publish(ORB_ID(sensor_accel0), _accel_pub, &accel);
+			orb_publish(ORB_ID(sensor_accel), _accel_pub, &accel);
 		}
 	}
 

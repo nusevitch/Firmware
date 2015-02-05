@@ -50,6 +50,7 @@
 #include <uORB/topics/vehicle_gps_position.h>
 #include <uORB/topics/vehicle_global_position.h>
 #include <uORB/topics/vehicle_local_position.h>
+#include <uORB/topics/vehicle_land_detected.h>
 #include <uORB/topics/home_position.h>
 #include <uORB/topics/vehicle_status.h>
 #include <uORB/topics/offboard_control_setpoint.h>
@@ -157,6 +158,7 @@ private:
 
 	mavlink_status_t status;
 	struct vehicle_local_position_s hil_local_pos;
+	struct vehicle_land_detected_s hil_land_detector;
 	struct vehicle_control_mode_s _control_mode;
 	orb_advert_t _global_pos_pub;
 	orb_advert_t _local_pos_pub;
@@ -183,6 +185,7 @@ private:
 	orb_advert_t _telemetry_status_pub;
 	orb_advert_t _rc_pub;
 	orb_advert_t _manual_pub;
+	orb_advert_t _land_detector_pub;
 	orb_advert_t _apnt_gps_status_pub;
 	orb_advert_t _apnt_site_status_pub;
 	orb_advert_t _tracking_status_pub;
