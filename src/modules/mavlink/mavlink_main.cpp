@@ -78,7 +78,7 @@
 #include "mavlink_messages.h"
 #include "mavlink_receiver.h"
 #include "mavlink_rate_limiter.h"
-#include "mavlink_commands.h"
+// #include "mavlink_commands.h"
 
 #ifndef MAVLINK_CRC_EXTRA
 #error MAVLINK_CRC_EXTRA has to be defined on PX4 systems
@@ -133,8 +133,6 @@ Mavlink::Mavlink() :
 	_streams(nullptr),
 	_mission_manager(nullptr),
 	_parameters_manager(nullptr),
-	_mission_pub(-1),
-	_mission_result_sub(-1),
 	_mode(MAVLINK_MODE_NORMAL),
 	_channel(MAVLINK_COMM_0),
 	_logbuffer {},

@@ -14,6 +14,8 @@
 #include <stdio.h>
 #include <poll.h>
 #include <string.h>
+#include <drivers/drv_hrt.h>
+#include <time.h>
 
 #include <uORB/uORB.h>
 #include <uORB/topics/apnt_gps_status.h>
@@ -28,7 +30,7 @@ int everything_is_awesome_main(int argc, char *argv[]) {
 	printf("Watching APNT GPS status and Tracking CMDs\n");
 
 	// just to count how many messages it received
-	int count;
+	int count = 0;
 
 	/* subscribe to sensor_combined topic */
 	int apnt_sub_fd = orb_subscribe(ORB_ID(apnt_gps_status));
