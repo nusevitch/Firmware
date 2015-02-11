@@ -127,10 +127,6 @@ private:
 
 	bool _verbose;
 
-	/* XXX: NOT SURE IF THESE ARE JAGER NEEDED OR NOT */
-	mavlink_channel_t	_channel;
-	uint8_t			_comp_id;
-
 	/* do not allow top copying this class */
 	MavlinkMissionManager(MavlinkMissionManager &);
 	MavlinkMissionManager& operator = (const MavlinkMissionManager &);

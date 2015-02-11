@@ -578,6 +578,11 @@ public:
 		return new MavlinkStreamSystemTimeUsec(mavlink);
 	}
 
+	unsigned get_size()
+	{
+		return MAVLINK_MSG_ID_SYSTEM_TIME_LEN + MAVLINK_NUM_NON_PAYLOAD_BYTES;
+	}
+
 private:
 	MavlinkOrbSubscription *gps_sub;
 	uint64_t gps_boot_time;
@@ -2366,6 +2371,11 @@ public:
 		return new MavlinkStreamApntGPSStatus(mavlink);
 	}
 
+	unsigned get_size()
+	{
+		return MAVLINK_MSG_ID_APNT_GPS_STATUS_LEN+ MAVLINK_NUM_NON_PAYLOAD_BYTES;
+	}
+
 private:
 	MavlinkOrbSubscription *apnt_gps_sub;
 	uint64_t time;
@@ -2425,6 +2435,11 @@ public:
 		return new MavlinkStreamApntSiteStatus(mavlink);
 	}
 
+	unsigned get_size()
+	{
+		return MAVLINK_MSG_ID_APNT_SITE_STATUS_LEN + MAVLINK_NUM_NON_PAYLOAD_BYTES;
+	}
+
 private:
 	MavlinkOrbSubscription *apnt_site_sub;
 	uint64_t time;
@@ -2479,6 +2494,11 @@ public:
 	static MavlinkStream *new_instance(Mavlink *mavlink)
 	{
 		return new MavlinkStreamTrackingStatus(mavlink);
+	}
+
+	unsigned get_size()
+	{
+		return MAVLINK_MSG_ID_TRACKING_STATUS_LEN + MAVLINK_NUM_NON_PAYLOAD_BYTES;
 	}
 
 private:
@@ -2542,6 +2562,11 @@ public:
 		return new MavlinkStreamTrackingCmd(mavlink);
 	}
 
+	unsigned get_size()
+	{
+		return MAVLINK_MSG_ID_TRACKING_CMD_LEN + MAVLINK_NUM_NON_PAYLOAD_BYTES;
+	}
+
 private:
 	MavlinkOrbSubscription *tracking_cmd_sub;
 	uint64_t time;
@@ -2600,6 +2625,11 @@ public:
 	static MavlinkStream *new_instance(Mavlink *mavlink)
 	{
 		return new MavlinkStreamHuntReached(mavlink);
+	}
+
+	unsigned get_size()
+	{
+		return MAVLINK_MSG_ID_HUNT_MISSION_REACHED_LEN + MAVLINK_NUM_NON_PAYLOAD_BYTES;
 	}
 
 private:
@@ -2674,6 +2704,11 @@ public:
 	static MavlinkStream *new_instance(Mavlink *mavlink)
 	{
 		return new MavlinkStreamApntPosition(mavlink);
+	}
+
+	unsigned get_size()
+	{
+		return MAVLINK_MSG_ID_APNT_POSITION_LEN + MAVLINK_NUM_NON_PAYLOAD_BYTES;
 	}
 
 private:

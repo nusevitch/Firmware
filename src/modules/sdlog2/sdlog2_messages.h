@@ -451,6 +451,7 @@ struct log_AGP0_s {
 	float lon;
 	float alt;
 };
+*/
 
 /* --- AGP1 - APNT GPS STATUS 1 --- */
 /*
@@ -458,7 +459,7 @@ struct log_AGP0_s {
 struct log_AGP1_s {
 	uint8_t prn[8];
 	int16_t azimuth[8];
-};
+}; */
 
 /* --- AGP2 - APNT GPS STATUS 2 --- */
 /*
@@ -466,7 +467,7 @@ struct log_AGP1_s {
 struct log_AGP2_s {
 	uint8_t elevation[8];
 	uint8_t snr[8];
-};
+}; */
 
 /* --- ASIT - APNT SITE STATUS --- */
 /*
@@ -476,7 +477,7 @@ struct log_ASIT_s {
 	float lat[4];
 	float lon[4];
 	uint16_t signal[4];
-};
+}; */
 
 
 /* --- TRAC - TRACKING STATUS --- */
@@ -485,7 +486,7 @@ struct log_ASIT_s {
 struct log_TRAC_s {
 	uint8_t computer_status;
 	uint8_t hunt_state;
-};
+}; */
 
 /* --- TCMD - TRACKING CMD --- */
 /*
@@ -497,7 +498,7 @@ struct log_TCMD_s {
 	double east;
 	float yaw_angle;
 	float altitude;
-};
+}; */
 
 
 /* --- APOS - APNT POSITION --- */
@@ -507,7 +508,7 @@ struct log_APOS_s {
 	uint64_t position_time;
 	float lat;
 	float lon;
-};
+}; */
 
 
 /********** SYSTEM MESSAGES, ID > 0x80 **********/

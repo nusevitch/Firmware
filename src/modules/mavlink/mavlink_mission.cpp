@@ -291,26 +291,22 @@ MavlinkMissionManager::send_mission_item_reached(uint16_t seq)
 void
 MavlinkMissionManager::send_hunt_current(uint16_t id)
 {
-	mavlink_message_t msg;
 	mavlink_hunt_mission_current_t hc;
 
 	hc.current_cmd_id = id;
 
-	mavlink_msg_hunt_mission_current_encode_chan(mavlink_system.sysid, _comp_id, _channel, &msg, &hc);
-	_mavlink->send_message(&msg);
+	_mavlink->send_message(MAVLINK_MSG_ID_HUNT_MISSION_CURRENT, &hc);
 }
 
 
 void
 MavlinkMissionManager::send_hunt_cmd_finished(uint16_t id)
 {
-	mavlink_message_t msg;
 	mavlink_hunt_mission_reached_t hr;
 
 	hr.reached_cmd_id = id;
 
-	mavlink_msg_hunt_mission_reached_encode_chan(mavlink_system.sysid, _comp_id, _channel, &msg, &hr);
-	_mavlink->send_message(&msg);
+	_mavlink->send_message(MAVLINK_MSG_ID_HUNT_MISSION_REACHED, &hr);
 }
 
 void
