@@ -1339,12 +1339,6 @@ Mavlink::task_main(int argc, char *argv[])
 	/* start the MAVLink receiver */
 	_receive_thread = MavlinkReceiver::receive_start(this);
 
-	_mission_result_sub = orb_subscribe(ORB_ID(mission_result));
-
-	/* create mission manager */
-	_mission_manager = new MavlinkMissionManager(this);
-	_mission_manager->set_verbose(_verbose);
-
 	_task_running = true;
 
 	MavlinkOrbSubscription *param_sub = add_orb_subscription(ORB_ID(parameter_update));
@@ -1382,7 +1376,7 @@ Mavlink::task_main(int argc, char *argv[])
 	switch (_mode) {
 	case MAVLINK_MODE_NORMAL:
 		configure_stream("SYS_STATUS", 1.0f);
-		configure_stream("SYSTEM_TIME_USEC", 1.0f * rate_mult);
+		configure_stream("SYSTEM_TIME_USEC", 1.0f);
 		configure_stream("GPS_GLOBAL_ORIGIN", 0.5f);
 		configure_stream("HIGHRES_IMU", 1.0f);
 		configure_stream("ATTITUDE", 10.0f);

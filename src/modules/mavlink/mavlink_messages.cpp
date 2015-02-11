@@ -573,9 +573,9 @@ public:
 		return MAVLINK_MSG_ID_SYSTEM_TIME_USEC;
 	}
 
-	static MavlinkStream *new_instance()
+	static MavlinkStream *new_instance(Mavlink *mavlink)
 	{
-		return new MavlinkStreamSystemTimeUsec();
+		return new MavlinkStreamSystemTimeUsec(mavlink);
 	}
 
 private:
@@ -587,24 +587,22 @@ private:
 	MavlinkStreamSystemTimeUsec& operator = (const MavlinkStreamSystemTimeUsec &);
 
 protected:
-	explicit MavlinkStreamSystemTimeUsec() : MavlinkStream(),
-	gps_sub(nullptr),
+	explicit MavlinkStreamSystemTimeUsec(Mavlink *mavlink) : MavlinkStream(mavlink),
+	gps_sub(_mavlink->add_orb_subscription(ORB_ID(vehicle_gps_position))),
 	gps_boot_time(0)
 	{}
-
-	void subscribe(Mavlink *mavlink)
-	{
-		gps_sub = mavlink->add_orb_subscription(ORB_ID(vehicle_gps_position));
-	}
 
 	void send(const hrt_abstime t)
 	{
 		struct vehicle_gps_position_s gps;
 
 		if (gps_sub->update(&gps_boot_time, &gps)) {
-			mavlink_msg_system_time_usec_send(_channel,
-					gps.time_gps_usec,
-					gps.timestamp_position);
+			mavlink_system_time_usec_t msg;
+			msg.time_boot_usec = gps.timestamp_position;
+			msg.time_unix_usec = gps.time_utc_usec;
+
+
+			_mavlink->send_message(MAVLINK_MSG_ID_SYSTEM_TIME_USEC, &msg);
 		}
 	}
 };
