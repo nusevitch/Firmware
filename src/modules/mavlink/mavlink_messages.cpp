@@ -2363,9 +2363,9 @@ public:
 		return MAVLINK_MSG_ID_APNT_GPS_STATUS;
 	}
 
-	static MavlinkStream *new_instance()
+	static MavlinkStream *new_instance(Mavlink *mavlink)
 	{
-		return new MavlinkStreamApntGPSStatus();
+		return new MavlinkStreamApntGPSStatus(mavlink);
 	}
 
 private:
@@ -2377,23 +2377,28 @@ private:
 	MavlinkStreamApntGPSStatus& operator = (const MavlinkStreamApntGPSStatus &);
 
 protected:
-	explicit MavlinkStreamApntGPSStatus() : MavlinkStream(),
-		apnt_gps_sub(nullptr),
+	explicit MavlinkStreamApntGPSStatus(Mavlink *mavlink) : MavlinkStream(mavlink),
+		apnt_gps_sub(_mavlink->add_orb_subscription(ORB_ID(apnt_gps_status))),
 		time(0)
 	{}
-
-	void subscribe(Mavlink *mavlink)
-	{
-		apnt_gps_sub = mavlink->add_orb_subscription(ORB_ID(apnt_gps_status));
-	}
 
 	void send(const hrt_abstime t)
 	{
 		struct apnt_gps_status_s status;
 
 		if (apnt_gps_sub->update(&time, &status)) {
-			mavlink_msg_apnt_gps_status_send(_channel, status.timestamp, status.lat, status.lon, status.alt,
-					status.prn, status.azimuth, status.elevation, status.snr);
+			mavlink_apnt_gps_status_t msg;
+			msg.timestamp_usec = status.timestamp;
+			msg.gps_lat = status.lat;
+			msg.gps_lon = status.lon;
+			msg.gps_alt = status.alt;
+
+			memcpy(msg.prn, status.prn, sizeof(msg.prn));
+			memcpy(msg.azimuth, status.azimuth, sizeof(msg.azimuth));
+			memcpy(msg.elevation, status.elevation, sizeof(msg.elevation));
+			memcpy(msg.snr, status.snr, sizeof(msg.snr));
+
+			_mavlink->send_message(MAVLINK_MSG_ID_APNT_GPS_STATUS, &msg);
 		}
 	}
 };
@@ -2417,9 +2422,9 @@ public:
 		return MAVLINK_MSG_ID_APNT_SITE_STATUS;
 	}
 
-	static MavlinkStream *new_instance()
+	static MavlinkStream *new_instance(Mavlink *mavlink)
 	{
-		return new MavlinkStreamApntSiteStatus();
+		return new MavlinkStreamApntSiteStatus(mavlink);
 	}
 
 private:
@@ -2431,23 +2436,26 @@ private:
 	MavlinkStreamApntSiteStatus& operator = (const MavlinkStreamApntSiteStatus &);
 
 protected:
-	explicit MavlinkStreamApntSiteStatus() : MavlinkStream(),
-		apnt_site_sub(nullptr),
+	explicit MavlinkStreamApntSiteStatus(Mavlink *mavlink) : MavlinkStream(mavlink),
+		apnt_site_sub(_mavlink->add_orb_subscription(ORB_ID(apnt_site_status))),
 		time(0)
 	{}
-
-	void subscribe(Mavlink *mavlink)
-	{
-		apnt_site_sub = mavlink->add_orb_subscription(ORB_ID(apnt_site_status));
-	}
 
 	void send(const hrt_abstime t)
 	{
 		struct apnt_site_status_s status;
 
 		if (apnt_site_sub->update(&time, &status)) {
-			mavlink_msg_apnt_site_status_send(_channel, status.timestamp, status.id, status.lat, status.lon,
-					status.signal);
+
+			mavlink_apnt_site_status_t msg;
+			msg.timestamp_usec = status.timestamp;
+
+			memcpy(msg.site_id, status.id, sizeof(msg.site_id));
+			memcpy(msg.site_lat, status.lat, sizeof(msg.site_lat));
+			memcpy(msg.site_lon, status.lon, sizeof(msg.site_lon));
+			memcpy(msg.site_signal, status.signal, sizeof(msg.site_signal));
+
+			_mavlink->send_message(MAVLINK_MSG_ID_APNT_SITE_STATUS, &msg);
 		}
 	}
 };
@@ -2470,9 +2478,9 @@ public:
 		return MAVLINK_MSG_ID_TRACKING_STATUS;
 	}
 
-	static MavlinkStream *new_instance()
+	static MavlinkStream *new_instance(Mavlink *mavlink)
 	{
-		return new MavlinkStreamTrackingStatus();
+		return new MavlinkStreamTrackingStatus(mavlink);
 	}
 
 private:
@@ -2486,18 +2494,12 @@ private:
 	MavlinkStreamTrackingStatus& operator = (const MavlinkStreamTrackingStatus &);
 
 protected:
-	explicit MavlinkStreamTrackingStatus() : MavlinkStream(),
-		tracking_sub(nullptr),
-		hunt_state_sub(nullptr),
+	explicit MavlinkStreamTrackingStatus(Mavlink *mavlink) : MavlinkStream(mavlink),
+		tracking_sub(_mavlink->add_orb_subscription(ORB_ID(tracking_status))),
+		hunt_state_sub(_mavlink->add_orb_subscription(ORB_ID(hunt_state))),
 		tracking_time(0),
 		hunt_time(0)
 	{}
-
-	void subscribe(Mavlink *mavlink)
-	{
-		tracking_sub = mavlink->add_orb_subscription(ORB_ID(tracking_status));
-		hunt_state_sub = mavlink->add_orb_subscription(ORB_ID(hunt_state));
-	}
 
 	void send(const hrt_abstime t)
 	{
@@ -2508,8 +2510,13 @@ protected:
 				updated |= hunt_state_sub->update(&tracking_time, &hunt_state);
 
 		if (updated) {
-			mavlink_msg_tracking_status_send(_channel, status.timestamp,
-					status.computer_status, hunt_state.hunt_mode_state);
+
+			mavlink_tracking_status_t msg;
+			msg.timestamp_usec = status.timestamp;
+			msg.computer_status = status.computer_status;
+			msg.hunt_mode_state = hunt_state.hunt_mode_state;
+
+			_mavlink->send_message(MAVLINK_MSG_ID_TRACKING_STATUS, &msg);
 		}
 	}
 };
@@ -2532,9 +2539,9 @@ public:
 		return MAVLINK_MSG_ID_TRACKING_CMD;
 	}
 
-	static MavlinkStream *new_instance()
+	static MavlinkStream *new_instance(Mavlink *mavlink)
 	{
-		return new MavlinkStreamTrackingCmd();
+		return new MavlinkStreamTrackingCmd(mavlink);
 	}
 
 private:
@@ -2546,23 +2553,29 @@ private:
 	MavlinkStreamTrackingCmd& operator = (const MavlinkStreamTrackingCmd &);
 
 protected:
-	explicit MavlinkStreamTrackingCmd() : MavlinkStream(),
-		tracking_cmd_sub(nullptr),
+	explicit MavlinkStreamTrackingCmd(Mavlink *mavlink) : MavlinkStream(mavlink),
+		tracking_cmd_sub(_mavlink->add_orb_subscription(ORB_ID(tracking_cmd))),
 		time(0)
 	{}
-
-	void subscribe(Mavlink *mavlink)
-	{
-		tracking_cmd_sub = mavlink->add_orb_subscription(ORB_ID(tracking_cmd));
-	}
 
 	void send(const hrt_abstime t)
 	{
 		struct tracking_cmd_s cmd;
 
 		if (tracking_cmd_sub->update(&time, &cmd)) {
-			mavlink_msg_tracking_cmd_send(_channel, cmd.timestamp, cmd.cmd_id, cmd.cmd_type, cmd.north, cmd.east,
-					cmd.yaw_angle, cmd.altitude);
+
+			mavlink_tracking_cmd_t msg;
+			msg.timestamp_usec = cmd.timestamp;
+			msg.cmd_id = cmd.cmd_id;
+			msg.cmd_type = cmd.cmd_type;
+			msg.north = cmd.north;
+			msg.east = cmd.east;
+			msg.yaw_angle = cmd.yaw_angle;
+			msg.altitude = cmd.altitude;
+
+
+			_mavlink->send_message(MAVLINK_MSG_ID_TRACKING_CMD, &msg);
+
 		}
 	}
 };
@@ -2586,9 +2599,9 @@ public:
 		return MAVLINK_MSG_ID_HUNT_MISSION_REACHED;
 	}
 
-	static MavlinkStream *new_instance()
+	static MavlinkStream *new_instance(Mavlink *mavlink)
 	{
-		return new MavlinkStreamHuntReached();
+		return new MavlinkStreamHuntReached(mavlink);
 	}
 
 private:
@@ -2602,18 +2615,12 @@ private:
 	MavlinkStreamHuntReached& operator = (const MavlinkStreamHuntReached &);
 
 protected:
-	explicit MavlinkStreamHuntReached() : MavlinkStream(),
-	temp_hunt_result_sub(nullptr),
-	hunt_result_sub(nullptr),
+	explicit MavlinkStreamHuntReached(Mavlink *mavlink) : MavlinkStream(mavlink),
+	temp_hunt_result_sub(_mavlink->add_orb_subscription(ORB_ID(temp_hunt_result))),
+	hunt_result_sub(_mavlink->add_orb_subscription(ORB_ID(hunt_result))),
 		time(0),
 		res_time(0)
 	{}
-
-	void subscribe(Mavlink *mavlink)
-	{
-		temp_hunt_result_sub = mavlink->add_orb_subscription(ORB_ID(temp_hunt_result));
-		hunt_result_sub = mavlink->add_orb_subscription(ORB_ID(hunt_result));
-	}
 
 	void send(const hrt_abstime t)
 	{
@@ -2621,15 +2628,26 @@ protected:
 		struct hunt_result_s real_res;
 
 		if (temp_hunt_result_sub->update(&time, &res)) {
-			mavlink_msg_hunt_mission_reached_send(_channel, res.cmd_reached);
+
+			mavlink_hunt_mission_reached_t msg;
+			msg.reached_cmd_id = res.cmd_reached;
+
+			_mavlink->send_message(MAVLINK_MSG_ID_HUNT_MISSION_REACHED, &msg);
 		}
 		if (hunt_result_sub->update(&res_time, &real_res)) {
 
 			// determine if sending a reached id or current id
 			if (real_res.reached) {
-				mavlink_msg_hunt_mission_reached_send(_channel, real_res.cmd_reached);
+				mavlink_hunt_mission_reached_t msg;
+				msg.reached_cmd_id = real_res.cmd_reached;
+
+				_mavlink->send_message(MAVLINK_MSG_ID_HUNT_MISSION_REACHED, &msg);
 			} else { // means we are sending a current id
-				mavlink_msg_hunt_mission_current_send(_channel, real_res.cmd_current);
+
+				mavlink_hunt_mission_current_t msg;
+				msg.current_cmd_id = real_res.cmd_current;
+
+				_mavlink->send_message(MAVLINK_MSG_ID_HUNT_MISSION_CURRENT, &msg);
 			}
 		}
 	}
@@ -2655,9 +2673,9 @@ public:
 		return MAVLINK_MSG_ID_APNT_POSITION;
 	}
 
-	static MavlinkStream *new_instance()
+	static MavlinkStream *new_instance(Mavlink *mavlink)
 	{
-		return new MavlinkStreamApntPosition();
+		return new MavlinkStreamApntPosition(mavlink);
 	}
 
 private:
@@ -2669,22 +2687,23 @@ private:
 	MavlinkStreamApntPosition& operator = (const MavlinkStreamApntPosition &);
 
 protected:
-	explicit MavlinkStreamApntPosition() : MavlinkStream(),
-		apnt_position_sub(nullptr),
+	explicit MavlinkStreamApntPosition(Mavlink *mavlink) : MavlinkStream(mavlink),
+		apnt_position_sub(_mavlink->add_orb_subscription(ORB_ID(apnt_position))),
 		time(0)
 	{}
-
-	void subscribe(Mavlink *mavlink)
-	{
-		apnt_position_sub = mavlink->add_orb_subscription(ORB_ID(apnt_position));
-	}
 
 	void send(const hrt_abstime t)
 	{
 		struct apnt_position_s position;
 
 		if (apnt_position_sub->update(&time, &position)) {
-			mavlink_msg_apnt_position_send(_channel, position.timestamp, position.lat, position.lon);
+
+			mavlink_apnt_position_t msg;
+			msg.timestamp_usec = position.timestamp;
+			msg.apnt_lat = position.lat;
+			msg.apnt_lon = position.lon;
+
+			_mavlink->send_message(MAVLINK_MSG_ID_APNT_POSITION, &msg);
 		}
 	}
 };
