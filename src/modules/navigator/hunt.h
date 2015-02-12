@@ -119,7 +119,15 @@ private:
 	orb_advert_t _hunt_state_pub;
 	struct hunt_state_s _hunt_state_s;
 
+	orb_advert_t _test_tracking_cmd_pub;
+
 	hrt_abstime _temp_time;
+	hrt_abstime _test_time;
+
+	float _test_north[4] = {-5.0,0.0,5.0,0.0};
+	float _test_east[4] = {0.0,5.0,0.0,-5.0};
+
+
 
 
 };

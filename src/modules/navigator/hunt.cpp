@@ -32,7 +32,13 @@ Hunt::Hunt(Navigator *navigator, const char *name) :
 	_hunt_result({0}),
 	_hunt_state_pub(-1),
 	_hunt_state_s({0}),
-	_temp_time(hrt_absolute_time())
+	_test_tracking_cmd_pub(-1),
+	_temp_time(hrt_absolute_time()),
+	_test_time(hrt_absolute_time())
+	//_test_north {-5.0,0.0,5.0,0.0},
+	//_test_east {0.0,5.0,0.0,-5.0} /**< test directions of south, east, north, west */
+
+
 {
 	/* load initial params */
 	updateParams();
@@ -52,7 +58,7 @@ void
 Hunt::on_inactive()
 {
 	// called when the hunt mode is made inactive
-	// need to reset some of the paramters
+	// need to reset some of the parameters
 
 	// maybe need to think about doing a suspended mode instead of off
 	// would make the _started parameter not needed?
@@ -63,7 +69,7 @@ Hunt::on_inactive()
 void
 Hunt::on_activation()
 {
-	// called when we hunt mode gets activiated
+	// called when we hunt mode gets activated
 
 	if (!_started) { // hunt not started, meaning this is the first time we have activated hunt
 		// go to start position
@@ -75,6 +81,8 @@ Hunt::on_activation()
 		// make sure it is known we cannot use the current mission item for loiter
 		// just needed for initial hover
 		_navigator->set_can_loiter_at_sp(false);
+
+		_started = true;
 
 
 
@@ -111,24 +119,26 @@ Hunt::on_active()
 
 	// only check mission success when not in a waiting mode (to avoid always checking whether or not
 	// we have reached the cmd when we are just waiting around)
+	// TODO: use own is mission item reached.... trying to use the existing one may be the source of some problems
 	if (_hunt_state != HUNT_STATE_WAIT && is_mission_item_reached()) {
+
+		_test_time = hrt_absolute_time(); // update the test time, this is for a delay between
 
 		// we finished with the cmd, so broadcast that
 		report_cmd_finished();
 
-		// should never not be the case here, but have this if statement just in case....
-		if (_hunt_state != HUNT_STATE_WAIT) {
-			_hunt_state = HUNT_STATE_WAIT;
+		// change the state to waiting since we have reached the target
+		_hunt_state = HUNT_STATE_WAIT;
 
-			// have vehicle start waiting
-			set_waiting();
+		// have vehicle start waiting
+		set_waiting();
 
-			// reset whether or not we have reached the mission item
-			reset_mission_item_reached();
+		// reset whether or not we have reached the mission item
+		reset_mission_item_reached();
 
-			// state changed here, so report it
-			report_status();
-		}
+		// state changed here, so report it
+		report_status();
+
 	}
 
 
@@ -177,6 +187,7 @@ Hunt::on_active()
 bool
 Hunt::get_next_cmd()
 {
+	/*
 	bool updated = false;
 	orb_check(_navigator->get_hunt_mission_sub(), &updated);
 
@@ -186,7 +197,29 @@ Hunt::get_next_cmd()
 		return true;
 	}
 
+	return false; */
+
+	// get the commands from onboard here
+	// add a 10 second pause before getting the next command
+	if (hrt_absolute_time() - _test_time >= 1e7) {
+		_tracking_cmd.timestamp = hrt_absolute_time();
+		_tracking_cmd.cmd_id = _current_cmd_id;
+		_tracking_cmd.cmd_type = HUNT_CMD_TRAVEL;
+		_tracking_cmd.north = _test_north[_current_cmd_id];
+		_tracking_cmd.east = _test_east[_current_cmd_id];
+		_tracking_cmd.yaw_angle = 0.0;
+		_tracking_cmd.altitude = 60.0;
+
+		if (_test_tracking_cmd_pub < 0) {
+			_test_tracking_cmd_pub = orb_advertise(ORB_ID(tracking_cmd), &_tracking_cmd);
+		} else {
+			orb_publish(ORB_ID(tracking_cmd), _test_tracking_cmd_pub, &_tracking_cmd);
+		}
+		return true;
+	}
+
 	return false;
+
 }
 
 void
@@ -267,7 +300,7 @@ Hunt::set_next_item()
 	_mission_item.acceptance_radius = _navigator->get_acceptance_radius();
 	_mission_item.time_inside = 0.0f;
 	_mission_item.pitch_min = 0.0f;
-	_mission_item.autocontinue = true;
+	_mission_item.autocontinue = false;
 	_mission_item.origin = ORIGIN_TRACKING;
 
 
@@ -312,7 +345,7 @@ Hunt::set_waiting()
 	// _navigator->set_can_loiter_at_sp(pos_sp_triplet->current.type == SETPOINT_TYPE_LOITER); // this is what mission does
 
 	// XXX: really not sure...
-	_navigator->set_can_loiter_at_sp(true);
+	// _navigator->set_can_loiter_at_sp(true);
 
 	_navigator->set_position_setpoint_triplet_updated();
 }
