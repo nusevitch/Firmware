@@ -25,8 +25,8 @@ struct tracking_cmd_s {
 	uint64_t timestamp;
 	uint8_t cmd_type; 	/**< type of command */
 	uint16_t cmd_id;		/**< id of the command, an incremental number sent from tracking (mainly for double checking */
-	double north;		/**< north distance or angle or rotation, depending on command type */
-	double east;		/**< east distance */
+	float north;		/**< north distance or angle or rotation, depending on command type */
+	float east;		/**< east distance */
 	float yaw_angle;		/**< a third parameter, possible desired yaw to maintain during flight... */
 	float altitude;
 };
