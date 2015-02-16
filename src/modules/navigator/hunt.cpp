@@ -23,20 +23,24 @@
 #include "hunt.h"
 
 Hunt::Hunt(Navigator *navigator, const char *name) :
-	MissionBlock(navigator, name),
-	_hunt_state(HUNT_STATE_OFF),
-	_started(false),
-	_current_cmd_id(0),
-	_tracking_cmd({0}),
-	_hunt_result_pub(-1),
-	_hunt_result({0}),
-	_hunt_state_pub(-1),
-	_hunt_state_s({0}),
-	_test_tracking_cmd_pub(-1),
-	_temp_time(hrt_absolute_time()),
-	_test_time(hrt_absolute_time())
-	//_test_north {-5.0,0.0,5.0,0.0},
-	//_test_east {0.0,5.0,0.0,-5.0} /**< test directions of south, east, north, west */
+MissionBlock(navigator, name),
+_hunt_state(HUNT_STATE_OFF),
+_local_pos_sub(-1),
+_local_pos({0}),
+_ref_pos({0}),
+_started(false),
+_current_cmd_id(0),
+_tracking_cmd({0}),
+_hunt_result_pub(-1),
+_hunt_result({0}),
+_hunt_state_pub(-1),
+_hunt_state_s({0}),
+_test_tracking_cmd_pub(-1),
+_temp_time(hrt_absolute_time()),
+_test_time(hrt_absolute_time()),
+_ref_timestamp(0)
+//_test_north {-5.0,0.0,5.0,0.0},
+//_test_east {0.0,5.0,0.0,-5.0} /**< test directions of south, east, north, west */
 
 
 {
@@ -91,6 +95,13 @@ Hunt::on_activation()
 		// if not at the last commanded location, go to last commanded location
 	}
 
+	// update our copy of the local position
+	update_local_position();
+
+	// update the reference position
+	update_reference_position();
+
+
 	// create a mission item for the current location
 	_mission_item.lat = _navigator->get_global_position()->lat;
 	_mission_item.lon = _navigator->get_global_position()->lon;
@@ -116,6 +127,12 @@ void
 Hunt::on_active()
 {
 	// TODO: this is where all the stuff runs
+
+	// update our copy of the local position
+	update_local_position();
+
+	// update the reference position
+	update_reference_position();
 
 	// only check mission success when not in a waiting mode (to avoid always checking whether or not
 	// we have reached the cmd when we are just waiting around)
@@ -228,8 +245,8 @@ Hunt::set_next_item()
 	/* get pointer to the position setpoint from the navigator */
 	struct position_setpoint_triplet_s *pos_sp_triplet = _navigator->get_position_setpoint_triplet();
 
-	double northDist = 0.0;
-	double eastDist = 0.0;
+	// double northDist = 0.0;
+	// double eastDist = 0.0;
 
 	/* make sure we have the latest params */
 	updateParams();
@@ -253,6 +270,7 @@ Hunt::set_next_item()
 	case HUNT_CMD_TRAVEL: {
 
 		/* get desired north and east distances of travel */
+		/*
 		northDist = _tracking_cmd.north; // not south is just a negative north distance
 		eastDist = _tracking_cmd.east;
 
@@ -264,6 +282,9 @@ Hunt::set_next_item()
 
 		// TODO: maybe change the desired yaw to be in the direction assumed of the jammer
 		_mission_item.yaw = 0.0; // want to keep facing north during moves so that when a rotation is called, we know we are starting from north
+		 */
+
+		set_mission_latlon();
 
 		// change the hunt state to move
 		_hunt_state = HUNT_STATE_MOVE;
@@ -409,6 +430,49 @@ Hunt::publish_status()
 		/* advertise and publish */
 		_hunt_state_pub = orb_advertise(ORB_ID(hunt_state), &_hunt_state_s);
 	}
+}
+
+
+void
+Hunt::update_local_position()
+{
+	if (_local_pos_sub > 0) {
+		orb_copy(ORB_ID(vehicle_local_position), _local_pos_sub, &_local_pos);
+	} else {
+		_local_pos_sub = orb_subscribe(ORB_ID(vehicle_local_position));
+		orb_copy(ORB_ID(vehicle_local_position), _local_pos_sub, &_local_pos);
+	}
+
+}
+
+
+void
+Hunt::update_reference_position()
+{
+	// if we have a new local position, update the reference position
+	if (_local_pos.ref_timestamp != _ref_timestamp) {
+
+		/* update local projection reference */
+		map_projection_init(&_ref_pos, _local_pos.ref_lat, _local_pos.ref_lon);
+		// NOTE: these reference lat and lon points should never change...
+
+		_ref_timestamp = _local_pos.ref_timestamp;
+	}
+}
+
+
+void
+Hunt::set_mission_latlon()
+{
+	// calculate the desired noth and east positions in the local frame
+	float north_desired = _tracking_cmd.north + _local_pos.x;
+	float east_desired = _tracking_cmd.east + _local_pos.y;
+
+	// now need to convert from the local frame to lat lon, will also directly set it
+	// to the mission item while we are at it
+	map_projection_reproject(&_ref_pos, north_desired, east_desired, &_mission_item.lat, &_mission_item.lon);
+
+
 }
 
 

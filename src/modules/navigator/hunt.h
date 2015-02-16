@@ -16,10 +16,13 @@
 #include <uORB/topics/mission.h>
 #include <uORB/topics/home_position.h>
 #include <uORB/topics/vehicle_global_position.h>
+#include <uORB/topics/vehicle_local_position.h>
 #include <uORB/topics/tracking_cmd.h>
 #include <uORB/topics/tracking_status.h>
 #include <uORB/topics/hunt_state.h>
 #include <uORB/topics/hunt_result.h>
+
+#include <lib/geo/geo.h> 		/*< for conversion from local x,y to lat, lon */
 
 #include "navigator_mode.h"
 #include "mission_block.h"
@@ -87,6 +90,21 @@ private:
 	 */
 	void rest_hunt_item_reached();
 
+	/*
+	 * get an update of the local position
+	 */
+	void update_local_position();
+
+	/*
+	 * update the reference position used in converting from local position to global position
+	 */
+	void update_reference_position();
+
+	/*
+	 * set the mission lat, lon coordinates from the tracking cmds N, E position
+	 */
+	void set_mission_latlon();
+
 	/**
 	 * states that the hunt script can be in
 	 * will be used to help identify whether we
@@ -103,6 +121,13 @@ private:
 	*/
 
 	int _hunt_state;
+
+	int _local_pos_sub; // subscription to the local position
+
+
+	struct vehicle_local_position_s _local_pos;
+
+	struct map_projection_reference_s _ref_pos;	// this is reference position
 
 	/**
 	 * boolean to simply hold whether or not a hunt has started
@@ -123,6 +148,7 @@ private:
 
 	hrt_abstime _temp_time;
 	hrt_abstime _test_time;
+	hrt_abstime _ref_timestamp;	// timestamp the reference position was taken at
 
 	float _test_north[4] = {-5.0,0.0,5.0,0.0};
 	float _test_east[4] = {0.0,5.0,0.0,-5.0};
