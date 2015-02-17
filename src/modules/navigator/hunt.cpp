@@ -196,6 +196,9 @@ Hunt::on_active()
 		}*/
 	}
 
+	// always report the status here, just so there is a constant new mavlink message
+	report_status();
+
 	// XXX: IMPORTANT
 	// TODO: figure out how to broadcast done with the command
 

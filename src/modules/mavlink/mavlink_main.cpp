@@ -1389,12 +1389,12 @@ Mavlink::task_main(int argc, char *argv[])
 		configure_stream("ATTITUDE_TARGET", 3.0f);
 		configure_stream("DISTANCE_SENSOR", 0.5f);
 		configure_stream("OPTICAL_FLOW_RAD", 5.0f);
-		configure_stream("APNT_GPS_STATUS", 1.0f);
-		configure_stream("APNT_SITE_STATUS", 1.0f);
-		configure_stream("TRACKING_STATUS", 1.0f);
-		configure_stream("TRACKING_CMD", 1.0f);
-		configure_stream("HUNT_MISSION_REACHED", 1.0f);
-		configure_stream("APNT_POSITION", 1.0f);
+		// configure_stream("APNT_GPS_STATUS", 1.0f);
+		// configure_stream("APNT_SITE_STATUS", 1.0f);
+		configure_stream("TRACKING_STATUS", 0.5f);
+		configure_stream("TRACKING_CMD", 0.5f);
+		configure_stream("HUNT_MISSION_REACHED", 0.5f);
+		// configure_stream("APNT_POSITION", 1.0f);
 		break;
 
 	case MAVLINK_MODE_ONBOARD:
