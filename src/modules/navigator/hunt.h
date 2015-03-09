@@ -120,42 +120,39 @@ private:
 	} _hunt_state;
 	*/
 
-	int _hunt_state;
-
-	int _local_pos_sub; // subscription to the local position
-
-
-	struct vehicle_local_position_s _local_pos;
-
-	struct map_projection_reference_s _ref_pos;	// this is reference position
-
 	/**
 	 * boolean to simply hold whether or not a hunt has started
 	 * will just change the behavior of vehicle when coming from off state
 	 */
 	bool _started;
-	uint16_t _current_cmd_id;
+	uint16_t _current_cmd_id;			/**< the current command being run */
+	int _hunt_state;					/**< the current state */
 
-	struct tracking_cmd_s _tracking_cmd;
+	/* params */
+	control::BlockParamFloat _param_yaw_increment;
 
-	orb_advert_t _hunt_result_pub;
-	struct hunt_result_s _hunt_result;
+	int _local_pos_sub; /**< subscription to the local position */
 
-	orb_advert_t _hunt_state_pub;
-	struct hunt_state_s _hunt_state_s;
+	orb_advert_t _hunt_result_pub;	/**< publish the current hunt result */
+	orb_advert_t _hunt_state_pub;	/**< publish the current hunt state */
 
-	orb_advert_t _test_tracking_cmd_pub;
+	struct vehicle_local_position_s _local_pos;	/**< local position struct */
+
+	struct hunt_result_s _hunt_result;		/**< struct for the result of a cmd */
+	struct hunt_state_s _hunt_state_s;		/**< struct for the state of the hunt mode */
+	struct tracking_cmd_s _tracking_cmd;	/**< struct for the current tracking command */
+
+	struct map_projection_reference_s _ref_pos;	// this is reference position
+
+	/* rotation handling */
+	int		_current_rotation_direction;	/**< -1 ccw, 1 cw and 0 no direction */
+	float	_end_rotation_angle;			/**< the angle by which time rotation time should stop (same as initial...) */
+	bool	_in_rotation;					/**< true if in a rotation already, false otherwise */
+
 
 	hrt_abstime _temp_time;
 	hrt_abstime _test_time;
 	hrt_abstime _ref_timestamp;	// timestamp the reference position was taken at
-
-	float _test_north[4] = {-5.0,0.0,5.0,0.0};
-	float _test_east[4] = {0.0,5.0,0.0,-5.0};
-
-
-
-
 };
 
 

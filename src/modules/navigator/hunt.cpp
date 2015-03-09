@@ -23,27 +23,39 @@
 #include "hunt.h"
 
 Hunt::Hunt(Navigator *navigator, const char *name) :
-MissionBlock(navigator, name),
-_hunt_state(HUNT_STATE_OFF),
-_local_pos_sub(-1),
-_local_pos({0}),
-_ref_pos({0}),
-_started(false),
-_current_cmd_id(0),
-_tracking_cmd({0}),
-_hunt_result_pub(-1),
-_hunt_result({0}),
-_hunt_state_pub(-1),
-_hunt_state_s({0}),
-_test_tracking_cmd_pub(-1),
-_temp_time(hrt_absolute_time()),
-_test_time(hrt_absolute_time()),
-_ref_timestamp(0)
-//_test_north {-5.0,0.0,5.0,0.0},
-//_test_east {0.0,5.0,0.0,-5.0} /**< test directions of south, east, north, west */
+	MissionBlock(navigator, name),
+/* hunt state/logic */
+	_started(false),
+	_current_cmd_id(0),
+	_hunt_state(HUNT_STATE_OFF),
 
+/* params */
+	_param_yaw_increment(this, "HUNT_YAW_STEP", false),
 
+/* subscriptions */
+	_local_pos_sub(-1),
+
+/* publications */
+	_hunt_result_pub(-1),
+	_hunt_state_pub(-1),
+
+/* rotation handling */
+	_current_rotation_direction(0),
+	_end_rotation_angle(0),
+	_in_rotation(false),
+
+/* time */
+	_temp_time(hrt_absolute_time()),
+	_test_time(hrt_absolute_time()),
+	_ref_timestamp(0)
 {
+	/* initialize structs */
+	_local_pos = {};
+	_ref_pos = {};
+	_tracking_cmd = {};
+	_hunt_result = {};
+	_hunt_state_s = {};
+
 	/* load initial params */
 	updateParams();
 
@@ -137,7 +149,7 @@ Hunt::on_active()
 	// only check mission success when not in a waiting mode (to avoid always checking whether or not
 	// we have reached the cmd when we are just waiting around)
 	// TODO: use own is mission item reached.... trying to use the existing one may be the source of some problems
-	if (_hunt_state != HUNT_STATE_WAIT && is_mission_item_reached()) {
+	if (_hunt_state == HUNT_STATE_MOVE && is_mission_item_reached()) {
 
 		_test_time = hrt_absolute_time(); // update the test time, this is for a delay between
 
@@ -156,21 +168,22 @@ Hunt::on_active()
 		// state changed here, so report it
 		report_status();
 
-	}
-
-
-	// temporarily just change the state every once in a while
-	/*
-	if (_temp_time - hrt_absolute_time() > 10e6) {
-		if (_hunt_state == HUNT_STATE_ROTATE) {
-			_hunt_state = HUNT_STATE_OFF;
-		} else {
-			_hunt_state++;
+	} else if (_hunt_state == HUNT_STATE_ROTATE) {
+		if (!_in_rotation) {
+			_in_rotation = true;
+			_end_rotation_angle = _navigator->get_global_position()->yaw; // want to rotate 360 degrees
 		}
-		_temp_time = hrt_absolute_time();
-		report_status();
-	} */
 
+		// check to see if there is a new command, if not will just continue rotating
+		if (get_next_cmd()) {
+			// update the final angle
+			_end_rotation_angle = _navigator->get_global_position()->yaw;
+		}
+
+		// just go ahead and keep rotating, etc.
+		set_next_item();
+
+	}
 
 	// XXX: not sure if or or and is best here, depends on when hunt state is
 	// changed to wait
@@ -182,18 +195,7 @@ Hunt::on_active()
 			set_next_item();
 
 			// set next item will handle the state change to a none wait state
-		} /*else {
-
-			// if we were not in a waiting state, need to go into a waiting state
-			// and need to tell the vehicle to loiter here (I think)
-			if (_hunt_state != HUNT_STATE_WAIT) {
-				// change our state to waiting
-				_hunt_state = HUNT_STATE_WAIT;
-
-				// put the vehicle into a waiting mode
-				set_waiting();
-			}
-		}*/
+		}
 	}
 
 	// always report the status here, just so there is a constant new mavlink message
@@ -207,7 +209,6 @@ Hunt::on_active()
 bool
 Hunt::get_next_cmd()
 {
-	/*
 	bool updated = false;
 	orb_check(_navigator->get_hunt_mission_sub(), &updated);
 
@@ -217,29 +218,7 @@ Hunt::get_next_cmd()
 		return true;
 	}
 
-	return false; */
-
-	// get the commands from onboard here
-	// add a 10 second pause before getting the next command
-	if (hrt_absolute_time() - _test_time >= 1e7) {
-		_tracking_cmd.timestamp = hrt_absolute_time();
-		_tracking_cmd.cmd_id = _current_cmd_id;
-		_tracking_cmd.cmd_type = HUNT_CMD_TRAVEL;
-		_tracking_cmd.north = _test_north[_current_cmd_id];
-		_tracking_cmd.east = _test_east[_current_cmd_id];
-		_tracking_cmd.yaw_angle = 0.0;
-		_tracking_cmd.altitude = 60.0;
-
-		if (_test_tracking_cmd_pub < 0) {
-			_test_tracking_cmd_pub = orb_advertise(ORB_ID(tracking_cmd), &_tracking_cmd);
-		} else {
-			orb_publish(ORB_ID(tracking_cmd), _test_tracking_cmd_pub, &_tracking_cmd);
-		}
-		return true;
-	}
-
 	return false;
-
 }
 
 void
@@ -271,36 +250,33 @@ Hunt::set_next_item()
 	// create a mission item from the tracking cmd
 	switch (_tracking_cmd.cmd_type) {
 	case HUNT_CMD_TRAVEL: {
-
-		/* get desired north and east distances of travel */
-		/*
-		northDist = _tracking_cmd.north; // not south is just a negative north distance
-		eastDist = _tracking_cmd.east;
-
-		// compute and set the desired latitude and longitude from
-		// the desired travel distances
-		// XXX: east might be backwards...
-		_mission_item.lat = _navigator->get_global_position()->lat + M_RAD_TO_DEG*(northDist/6378137.0);
-		_mission_item.lon = _navigator->get_global_position()->lon + M_RAD_TO_DEG*(eastDist/6378137.0)/cos(_navigator->get_global_position()->lat);
-
-		// TODO: maybe change the desired yaw to be in the direction assumed of the jammer
-		_mission_item.yaw = 0.0; // want to keep facing north during moves so that when a rotation is called, we know we are starting from north
-		 */
-
-		set_mission_latlon();
-
-		// change the hunt state to move
+		/* change the hunt state to move */
 		_hunt_state = HUNT_STATE_MOVE;
 
+		/* get desired north and east distances of travel */
+		set_mission_latlon();
+
+		_mission_item.yaw = 0.0f;	// for now just go with point north
 
 		break;
 	}
 	case HUNT_CMD_ROTATE: {
-		// TODO: implement ability to rotate
-
-		// change the hunt state to rotate
+		/* change the hunt state to rotate */
 		_hunt_state = HUNT_STATE_ROTATE;
 
+		_current_rotation_direction = _tracking_cmd.yaw_angle;
+
+		/* we want to just sit in one spot */
+		_mission_item.lat = _navigator->get_global_position()->lat;
+		_mission_item.lat = _navigator->get_global_position()->lon;
+
+		float yaw_step = _param_yaw_increment.get();
+		if (yaw_step > 0) {
+			_mission_item.yaw = _navigator->get_global_position()->yaw + _current_rotation_direction * yaw_step;
+		} else {
+			_mission_item.yaw = _navigator->get_global_position()->yaw + _current_rotation_direction * 10.0f;
+		}
+		_mission_item.yaw = _wrap_pi(_mission_item.yaw);
 
 		break;
 	}
@@ -474,8 +450,6 @@ Hunt::set_mission_latlon()
 	// now need to convert from the local frame to lat lon, will also directly set it
 	// to the mission item while we are at it
 	map_projection_reproject(&_ref_pos, north_desired, east_desired, &_mission_item.lat, &_mission_item.lon);
-
-
 }
 
 
