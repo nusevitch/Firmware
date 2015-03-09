@@ -150,7 +150,12 @@ MODULES		+= modules/bottle_drop
 GEN_PARAM_XML = 1
 #
 # APNT test module
- MODULES += modules/everything_is_awesome
+# MODULES += modules/everything_is_awesome
+
+#
+# Odroid Sim module
+MODULES += modules/jager_test
+
 
 #
 # Transitional support - add commands from the NuttX export archive.
