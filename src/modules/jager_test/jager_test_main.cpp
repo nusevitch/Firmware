@@ -513,7 +513,7 @@ OdroidSimulator::task_main()
 			if (_hunt_state.hunt_mode_state == HUNT_STATE_ROTATE) {
 				// TODO: this is where we can switch up directions
 
-				if (_wrap_pi(abs(_initial_angle - _local_pos.yaw)) >= math::radians(_test_rotate_distance[_cmd_id])) {
+				if (abs(_wrap_2pi(_initial_angle) - _wrap_2pi(_local_pos.yaw)) >= math::radians(_test_rotate_distance[_cmd_id])) {
 
 					/* set the cmd to change rotation direction */
 					change_direction();
