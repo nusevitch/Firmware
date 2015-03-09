@@ -148,6 +148,7 @@ private:
 	int		_current_rotation_direction;	/**< -1 ccw, 1 cw and 0 no direction */
 	float	_end_rotation_angle;			/**< the angle by which time rotation time should stop (same as initial...) */
 	bool	_in_rotation;					/**< true if in a rotation already, false otherwise */
+	bool	_allow_rotation_end;			/**< if true will start checking to see if we have reached the mission item */
 
 
 	hrt_abstime _temp_time;

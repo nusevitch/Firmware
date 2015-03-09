@@ -43,6 +43,7 @@ Hunt::Hunt(Navigator *navigator, const char *name) :
 	_current_rotation_direction(0),
 	_end_rotation_angle(0),
 	_in_rotation(false),
+	_allow_rotation_end(false),
 
 /* time */
 	_temp_time(hrt_absolute_time()),
@@ -169,20 +170,33 @@ Hunt::on_active()
 		report_status();
 
 	} else if (_hunt_state == HUNT_STATE_ROTATE) {
-		if (!_in_rotation) {
-			_in_rotation = true;
-			_end_rotation_angle = _navigator->get_global_position()->yaw; // want to rotate 360 degrees
+
+		/* check to see if rotation finished */
+		if (_allow_rotation_end && is_mission_item_reached()) {
+			_allow_rotation_end = false;
+			_in_rotation = false;
+
+			report_cmd_finished();
+
+			_hunt_state = HUNT_STATE_WAIT;
+			set_waiting();
+			reset_mission_item_reached();
+			report_cmd_finished();
+		} else {
+			/* if current location is w/in 5 deg of desired location, allow a stop */
+			if (abs(_navigator->get_global_position()->yaw - _end_rotation_angle) <= math::radians(5.0)) {
+				_allow_rotation_end = true;
+			}
+
+			// check to see if there is a new command, if not will just continue rotating
+			if (get_next_cmd()) {
+				// update the final angle
+				_end_rotation_angle = _navigator->get_global_position()->yaw;
+			}
+
+			// just go ahead and keep rotating, etc.
+			set_next_item();
 		}
-
-		// check to see if there is a new command, if not will just continue rotating
-		if (get_next_cmd()) {
-			// update the final angle
-			_end_rotation_angle = _navigator->get_global_position()->yaw;
-		}
-
-		// just go ahead and keep rotating, etc.
-		set_next_item();
-
 	}
 
 	// XXX: not sure if or or and is best here, depends on when hunt state is
@@ -264,11 +278,22 @@ Hunt::set_next_item()
 		/* change the hunt state to rotate */
 		_hunt_state = HUNT_STATE_ROTATE;
 
+		if (!_in_rotation) {
+			_in_rotation = true;
+			_end_rotation_angle = _navigator->get_global_position()->yaw; // want to rotate 360 degrees
+		}
+
 		_current_rotation_direction = _tracking_cmd.yaw_angle;
 
 		/* we want to just sit in one spot */
 		_mission_item.lat = _navigator->get_global_position()->lat;
 		_mission_item.lat = _navigator->get_global_position()->lon;
+
+		/* if ending rotation */
+		if (_allow_rotation_end) {
+			_mission_item.yaw = _navigator->get_global_position()->yaw;
+			break;
+		}
 
 		float yaw_step = _param_yaw_increment.get();
 		if (yaw_step > 0) {
