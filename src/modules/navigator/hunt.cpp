@@ -13,6 +13,7 @@
 #include <stdbool.h>
 #include <math.h>
 #include <fcntl.h>
+#include <mathlib/mathlib.h>
 
 #include <mavlink/mavlink_log.h>
 #include <systemlib/err.h>
@@ -151,6 +152,7 @@ Hunt::on_active()
 	// we have reached the cmd when we are just waiting around)
 	// TODO: use own is mission item reached.... trying to use the existing one may be the source of some problems
 	if (_hunt_state == HUNT_STATE_MOVE && is_mission_item_reached()) {
+		mavlink_log_info(_navigator->get_mavlink_fd(), "[HUNT] travel completed");
 
 		_test_time = hrt_absolute_time(); // update the test time, this is for a delay between
 
@@ -173,6 +175,7 @@ Hunt::on_active()
 
 		/* check to see if rotation finished */
 		if (_allow_rotation_end && is_mission_item_reached()) {
+			mavlink_log_info(_navigator->get_mavlink_fd(), "[HUNT] rotation completed");
 			_allow_rotation_end = false;
 			_in_rotation = false;
 
@@ -190,6 +193,7 @@ Hunt::on_active()
 
 			// check to see if there is a new command, if not will just continue rotating
 			if (get_next_cmd()) {
+				mavlink_log_info(_navigator->get_mavlink_fd(), "[HUNT] reversing rotation");
 				// update the final angle
 				_end_rotation_angle = _navigator->get_global_position()->yaw;
 			}
@@ -264,6 +268,7 @@ Hunt::set_next_item()
 	// create a mission item from the tracking cmd
 	switch (_tracking_cmd.cmd_type) {
 	case HUNT_CMD_TRAVEL: {
+		mavlink_log_info(_navigator->get_mavlink_fd(), "[HUNT] traveling");
 		/* change the hunt state to move */
 		_hunt_state = HUNT_STATE_MOVE;
 
@@ -275,10 +280,12 @@ Hunt::set_next_item()
 		break;
 	}
 	case HUNT_CMD_ROTATE: {
+
 		/* change the hunt state to rotate */
 		_hunt_state = HUNT_STATE_ROTATE;
 
 		if (!_in_rotation) {
+			mavlink_log_info(_navigator->get_mavlink_fd(), "[HUNT] rotating");
 			_in_rotation = true;
 			_end_rotation_angle = _navigator->get_global_position()->yaw; // want to rotate 360 degrees
 		}
@@ -350,7 +357,7 @@ Hunt::set_next_item()
 void
 Hunt::set_waiting()
 {
-
+	mavlink_log_info(_navigator->get_mavlink_fd(), "[HUNT] set to waiting");
 	/* get pointer to the position setpoint from the navigator */
 	struct position_setpoint_triplet_s *pos_sp_triplet = _navigator->get_position_setpoint_triplet();
 
