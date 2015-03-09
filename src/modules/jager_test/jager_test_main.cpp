@@ -124,6 +124,7 @@ private:
 	int _cmd_id;					/**< the current tracking cmd id */
 	hrt_abstime _last_cmd_time;		/**< timestamp the last cmd was sent */
 	float _initial_angle;				/**< the heading when the cmd was send in rads (-pi .. pi) */
+	float _final_angle;
 
 	struct {
 		param_t scenario;
@@ -223,6 +224,7 @@ OdroidSimulator::OdroidSimulator() :
 	_cmd_id(-1),
 	_last_cmd_time(-1),
 	_initial_angle(-1),
+	_final_angle(-1),
 
 /* testing */
 	_test_north{0},
@@ -385,6 +387,7 @@ OdroidSimulator::set_next_rotate_cmd()
 
 	_last_cmd_time = hrt_absolute_time();
 	_initial_angle = _local_pos.yaw;		// best guess this is -pi to pi
+	_final_angle = _wrap_2pi(_initial_angle + math::radians(_test_rotate_distance[_cmd_id]));
 
 
 }
@@ -513,7 +516,8 @@ OdroidSimulator::task_main()
 			if (_hunt_state.hunt_mode_state == HUNT_STATE_ROTATE) {
 				// TODO: this is where we can switch up directions
 
-				if (abs(_wrap_2pi(_initial_angle) - _wrap_2pi(_local_pos.yaw)) >= math::radians(_test_rotate_distance[_cmd_id])) {
+				/* if within 5 degrees of target switch angle */
+				if (abs(_local_pos.yaw - _final_angle) <= math::radians(5.0)) {
 
 					/* set the cmd to change rotation direction */
 					change_direction();
