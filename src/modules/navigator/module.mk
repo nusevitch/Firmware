@@ -56,7 +56,8 @@ SRCS		= navigator_main.cpp \
 		  enginefailure.cpp \
 		  gpsfailure.cpp \
 		  gpsfailure_params.c \
-		  hunt.cpp 
+		  hunt.cpp \
+		  hunt_params.c
 
 INCLUDE_DIRS	 += $(MAVLINK_SRC)/include/mavlink
 
