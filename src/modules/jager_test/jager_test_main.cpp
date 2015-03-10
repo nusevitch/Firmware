@@ -428,6 +428,8 @@ OdroidSimulator::task_main()
 	/*
 	 * do subscriptions
 	 */
+	_params_sub = orb_subscribe(ORB_ID(parameter_update));
+	_local_pos_sub = orb_subscribe(ORB_ID(vehicle_local_position));
 	_hunt_state_sub = orb_subscribe(ORB_ID(hunt_state));
 	_hunt_result_sub = orb_subscribe(ORB_ID(hunt_result));
 
