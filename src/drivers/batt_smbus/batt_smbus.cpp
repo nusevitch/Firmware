@@ -368,8 +368,7 @@ BATT_SMBUS::cycle()
 		uint8_t buff[4];
 
 		if (read_block(BATT_SMBUS_CURRENT, buff, 4, false) == 4) {
-			new_report.current_a = (float)((int32_t)((uint32_t)buff[3] << 24 | (uint32_t)buff[2] << 16 | (uint32_t)buff[1] << 8 |
-						       (uint32_t)buff[0])) / 1000.0f;
+			new_report.current_a = -(float)((int32_t)((uint32_t)buff[3] << 24 | (uint32_t)buff[2] << 16 | (uint32_t)buff[1] << 8 | (uint32_t)buff[0])) / 1000.0f;
 		}
 
 		// publish to orb
@@ -453,10 +452,7 @@ BATT_SMBUS::read_block(uint8_t reg, uint8_t *data, uint8_t max_len, bool append_
 	uint8_t pec = get_PEC(reg, true, buff, bufflen + 1);
 
 	if (pec != buff[bufflen + 1]) {
-		// debug
-		warnx("CurrPEC:%x vs MyPec:%x", (int)buff[bufflen + 1], (int)pec);
 		return 0;
-
 	}
 
 	// copy data

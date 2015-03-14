@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (c) 2012-2014 PX4 Development Team. All rights reserved.
+ *   Copyright (c) 2012-2015 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -1411,6 +1411,7 @@ Mavlink::task_main(int argc, char *argv[])
 		configure_stream("VFR_HUD", 10.0f);
 		configure_stream("SYSTEM_TIME", 1.0f);
 		configure_stream("TIMESYNC", 10.0f);
+		configure_stream("ACTUATOR_CONTROL_TARGET0", 10.0f);
 		break;
 
 	default:
@@ -1628,7 +1629,7 @@ Mavlink::start(int argc, char *argv[])
 	task_spawn_cmd(buf,
 		       SCHED_DEFAULT,
 		       SCHED_PRIORITY_DEFAULT,
-		       2800,
+		       2400,
 		       (main_t)&Mavlink::start_helper,
 		       (char * const *)argv);
 
