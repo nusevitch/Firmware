@@ -585,7 +585,7 @@ static const struct log_format_s log_formats[] = {
 	LOG_FORMAT(TECS, "fffffffffffffB",	"ASP,AF,FSP,F,FF,AsSP,AsF,AsDSP,AsD,TERSP,TER,EDRSP,EDR,M"),
 	LOG_FORMAT(WIND, "ffff",	"X,Y,CovX,CovY"),
 	LOG_FORMAT(HUNT, "B",	"HuntState"),
-	LOG_FORMAT(TCMD, "Bffff",	"id,type,N,E,yaw,alt"),
+	LOG_FORMAT(TCMD, "BBffff",	"id,type,N,E,yaw,alt"),
 
 	/* system-level messages, ID >= 0x80 */
 	/* FMT: don't write format of format message, it's useless */
