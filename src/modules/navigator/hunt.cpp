@@ -277,6 +277,10 @@ Hunt::set_next_item()
 
 		_mission_item.yaw = 0.0f;	// for now just go with point north
 
+		// setting the altitude of the mission item for a move command
+		_mission_item.altitude_is_relative = false;
+		_mission_item.altitude = _tracking_cmd.altitude;
+
 		break;
 	}
 	case HUNT_CMD_ROTATE: {
@@ -310,6 +314,10 @@ Hunt::set_next_item()
 		}
 		_mission_item.yaw = _wrap_pi(_mission_item.yaw);
 
+		// setting the altitude of the mission item for a rotate command (just want to use current altitude)
+		_mission_item.altitude_is_relative = false;
+		_mission_item.altitude = _navigator->get_global_position()->alt;
+
 		break;
 	}
 	default:
@@ -317,9 +325,6 @@ Hunt::set_next_item()
 
 	}
 
-	// setting the altitude of the mission item will be the same regardless of cmd type
-	_mission_item.altitude_is_relative = false;
-	_mission_item.altitude = _tracking_cmd.altitude;
 
 	// loiter radius and direction will be same, regardless of cmd type
 	_mission_item.loiter_radius = _navigator->get_loiter_radius();
