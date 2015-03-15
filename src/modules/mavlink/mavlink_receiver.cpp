@@ -1590,13 +1590,13 @@ MavlinkReceiver::handle_message_tracking_cmd(mavlink_message_t *msg) {
 	track_cmd_s.yaw_angle = cmd.yaw_angle;
 	track_cmd_s.altitude = cmd.altitude;
 
-	/*
+
 	if (_tracking_cmd_pub < 0) {
 		_tracking_cmd_pub = orb_advertise(ORB_ID(tracking_cmd), &track_cmd_s);
 	} else {
 		orb_publish(ORB_ID(tracking_cmd), _tracking_cmd_pub, &track_cmd_s);
 	}
-	*/
+
 }
 
 // THIS IS A TEMPORARY FUNCTION

@@ -166,7 +166,7 @@ GEN_PARAM_XML = 1
 
 #
 # Odroid Sim module
-MODULES += modules/jager_test
+# MODULES += modules/jager_test
 
 
 #
