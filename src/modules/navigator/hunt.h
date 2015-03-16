@@ -149,7 +149,8 @@ private:
 	float	_end_rotation_angle;			/**< the angle by which time rotation time should stop (same as initial...) */
 	bool	_in_rotation;					/**< true if in a rotation already, false otherwise */
 	bool	_allow_rotation_end;			/**< if true will start checking to see if we have reached the mission item */
-
+	float	_total_rotation;				/**< the angle through which we have rotated */
+	float	_prev_angle;					/**< the prev angle for total rotation calculation */
 
 	hrt_abstime _temp_time;
 	hrt_abstime _test_time;
