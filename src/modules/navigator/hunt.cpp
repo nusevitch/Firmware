@@ -265,9 +265,6 @@ Hunt::set_next_item()
 	/* get pointer to the position setpoint from the navigator */
 	struct position_setpoint_triplet_s *pos_sp_triplet = _navigator->get_position_setpoint_triplet();
 
-	// double northDist = 0.0;
-	// double eastDist = 0.0;
-
 	/* make sure we have the latest params */
 	updateParams();
 
@@ -295,7 +292,8 @@ Hunt::set_next_item()
 		/* get desired north and east distances of travel */
 		set_mission_latlon();
 
-		_mission_item.yaw = 0.0f;	// for now just go with point north
+		// _mission_item.yaw = 0.0f;	// for now just go with point north
+		_mission_item.yaw = _wrap_pi(math::radians((float) _current_cmd_id * 10.0f));	// for kicks, try also commanding a yaw angle
 
 		// setting the altitude of the mission item for a move command
 		_mission_item.altitude_is_relative = false;
