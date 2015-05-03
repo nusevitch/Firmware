@@ -105,6 +105,21 @@ private:
 	 */
 	void set_mission_latlon();
 
+	/*
+	 * execute some of the rotation stuff (mainly for testing at the moment)
+	 */
+	void rotate();
+
+	/*
+	 * do continuous rotation...
+	 */
+	void start_rotation();
+
+	/*
+	 * do continuous rotation...
+	 */
+	void continue_rotation();
+
 	/**
 	 * states that the hunt script can be in
 	 * will be used to help identify whether we
@@ -147,6 +162,8 @@ private:
 	/* rotation handling */
 	int		_current_rotation_direction;	/**< -1 ccw, 1 cw and 0 no direction */
 	float	_end_rotation_angle;			/**< the angle by which time rotation time should stop (same as initial...) */
+	float	_total_rotation;				/**< how far have we rotated so far (in radians) */
+	float	_prev_yaw;						/**< heading of the previous time step */
 	bool	_in_rotation;					/**< true if in a rotation already, false otherwise */
 	bool	_allow_rotation_end;			/**< if true will start checking to see if we have reached the mission item */
 
