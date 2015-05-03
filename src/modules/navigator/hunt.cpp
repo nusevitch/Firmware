@@ -47,6 +47,8 @@ Hunt::Hunt(Navigator *navigator, const char *name) :
 	_prev_yaw(0),
 	_in_rotation(false),
 	_allow_rotation_end(false),
+	_total_rotation(0.0f),
+	_prev_angle(0.0f),
 
 /* time */
 	_temp_time(hrt_absolute_time()),
@@ -178,6 +180,12 @@ Hunt::on_active()
 
 	} else if (_hunt_state == HUNT_STATE_ROTATE) {
 
+		// calculate the angle which we have rotated through so far
+		_total_rotation += _wrap_2pi(_navigator->get_global_position()->yaw - _prev_angle);
+		_prev_angle = _navigator->get_global_position()->yaw;
+
+		printf("the total angle of rotation so far = %f\n", (double) _total_rotation);
+
 		/* check to see if rotation finished */
 		if (is_mission_item_reached() /*_allow_rotation_end && is_mission_item_reached()*/) {
 			mavlink_log_info(_navigator->get_mavlink_fd(), "[HUNT] rotation completed");
@@ -213,6 +221,17 @@ Hunt::on_active()
 			// if current location is w/in 5 deg of desired location, allow a stop
 			if (abs(_navigator->get_global_position()->yaw - _end_rotation_angle) <= math::radians(5.0)) {
 				// _allow_rotation_end = true;
+			} */
+
+			/*
+			if (abs(_mission_item.yaw - _end_rotation_angle) <= math::radians(5.0)) {
+				_allow_rotation_end = true;
+			}
+			*/
+
+			if (_total_rotation >= math::radians(360.0f)) {
+				printf("we have rotated through 360 degrees\n");
+				_allow_rotation_end = true;
 			}
 
 			// check to see if there is a new command, if not will just continue rotating
@@ -286,9 +305,6 @@ Hunt::set_next_item()
 	/* get pointer to the position setpoint from the navigator */
 	struct position_setpoint_triplet_s *pos_sp_triplet = _navigator->get_position_setpoint_triplet();
 
-	// double northDist = 0.0;
-	// double eastDist = 0.0;
-
 	/* make sure we have the latest params */
 	updateParams();
 
@@ -330,12 +346,23 @@ Hunt::set_next_item()
 		_hunt_state = HUNT_STATE_ROTATE;
 
 		if (!_in_rotation) {
+
 			mavlink_log_info(_navigator->get_mavlink_fd(), "[HUNT] rotating");
 			_in_rotation = true;
 			_end_rotation_angle = _navigator->get_global_position()->yaw; // want to rotate 360 degrees
+			_total_rotation = 0.0f;
+			_allow_rotation_end = false;
+			_prev_angle = _end_rotation_angle;
+
+			printf("[HUNT] setting to be in rotation\n");
+			printf("setting end rotation angle to %f\n", (double) _end_rotation_angle);
 		}
 
-		_current_rotation_direction = _tracking_cmd.yaw_angle;
+		_current_rotation_direction = (int) _tracking_cmd.yaw_angle;
+
+		if (_current_rotation_direction == 0) {
+			_current_rotation_direction = 1;
+		}
 
 		/* we want to just sit in one spot */
 		_mission_item.lat = _navigator->get_global_position()->lat;
@@ -343,23 +370,42 @@ Hunt::set_next_item()
 
 		/* if ending rotation */
 		if (_allow_rotation_end) {
+			// just keep the current yaw command
 			_mission_item.yaw = _navigator->get_global_position()->yaw;
-			break;
+		} else {
+			float yaw_step = _param_yaw_increment.get();
+			if (yaw_step > 0) {
+			_mission_item.yaw = _navigator->get_global_position()->yaw + (float) _current_rotation_direction * math::radians(yaw_step);
+			} else {
+			_mission_item.yaw = _navigator->get_global_position()->yaw + (float) _current_rotation_direction * math::radians(45.0f);
+			}
+			_mission_item.yaw = _wrap_pi(_mission_item.yaw);
+
+			printf("setting yaw sp to %f\n", (double) _mission_item.yaw);
 		}
 
-		float yaw_step = _param_yaw_increment.get();
-		if (yaw_step > 0) {
-			_mission_item.yaw = _navigator->get_global_position()->yaw + (float) _current_rotation_direction * math::radians(yaw_step);
-		} else {
-			_mission_item.yaw = _navigator->get_global_position()->yaw + (float) _current_rotation_direction * math::radians(45.0f);
-		}
-		_mission_item.yaw = _wrap_pi(_mission_item.yaw);
+
 
 		// setting the altitude of the mission item for a rotate command (just want to use current altitude)
 		_mission_item.altitude_is_relative = false;
 		_mission_item.altitude = _navigator->get_global_position()->alt;
 
 		break;
+	}
+	case HUNT_CMD_FINISH: {
+		/* change the hunt state to off */
+		_hunt_state = HUNT_STATE_OFF;
+
+		set_waiting();
+
+		// report the new cmd id
+		report_cmd_id();
+
+		// status must have changed if at this point, so report it
+		report_status();
+
+		// straight up return from here...
+		return;
 	}
 	default:
 		break;
