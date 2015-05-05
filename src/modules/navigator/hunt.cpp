@@ -47,8 +47,6 @@ Hunt::Hunt(Navigator *navigator, const char *name) :
 	_prev_yaw(0),
 	_in_rotation(false),
 	_allow_rotation_end(false),
-	_total_rotation(0.0f),
-	_prev_angle(0.0f),
 
 /* time */
 	_temp_time(hrt_absolute_time()),
@@ -134,6 +132,7 @@ Hunt::on_activation()
 	// TODO: make change the state a function, will better outline the state machine...
 	report_status();
 
+	_tracking_cmd.yaw_angle = 1.0;
 	start_rotation();
 	report_status();
 
@@ -180,14 +179,9 @@ Hunt::on_active()
 
 	} else if (_hunt_state == HUNT_STATE_ROTATE) {
 
-		// calculate the angle which we have rotated through so far
-		_total_rotation += _wrap_2pi(_navigator->get_global_position()->yaw - _prev_angle);
-		_prev_angle = _navigator->get_global_position()->yaw;
-
-		printf("the total angle of rotation so far = %f\n", (double) _total_rotation);
-
 		/* check to see if rotation finished */
-		if (is_mission_item_reached() /*_allow_rotation_end && is_mission_item_reached()*/) {
+		if (is_mission_item_reached()) {
+
 			mavlink_log_info(_navigator->get_mavlink_fd(), "[HUNT] rotation completed");
 			_allow_rotation_end = false;
 			_in_rotation = false;
@@ -198,60 +192,40 @@ Hunt::on_active()
 			set_waiting();
 			reset_mission_item_reached();
 			report_cmd_finished();
-		} else {
-			// need to calculate the yaw increment
-			float currentYaw2pi = _wrap_2pi(_navigator->get_global_position()->yaw);
-			float prevYaw2pi = _wrap_2pi(_prev_yaw);
-			float dtheta = math::min(fabsf(prevYaw2pi - currentYaw2pi), _wrap_2pi((M_TWOPI_F - prevYaw2pi) + currentYaw2pi));
-			_total_rotation += dtheta;
-			mavlink_log_info(_navigator->get_mavlink_fd(), "[HUNT] total rotation: %2.3f deg", (double) math::degrees(_total_rotation));
 
-			float yaw_step = _param_yaw_increment.get();
-			float threshold = M_TWOPI_F - math::radians(90.0f);
-			if (yaw_step > 0) {
-				threshold = M_TWOPI_F - math::radians(yaw_step);
+		} else {	/* still rotating */
+
+
+			if (get_next_cmd()) { /* termination of direction change requested */
+
+				set_next_item();
+
+			} else {	/* continue rotation */
+
+				// need to calculate the yaw increment
+				float currentYaw2pi = _wrap_2pi(_navigator->get_global_position()->yaw);
+				float prevYaw2pi = _wrap_2pi(_prev_yaw);
+				float dtheta = math::min(fabsf(prevYaw2pi - currentYaw2pi), _wrap_2pi((M_TWOPI_F - prevYaw2pi) + currentYaw2pi));
+				_total_rotation += dtheta;
+				mavlink_log_info(_navigator->get_mavlink_fd(), "[HUNT] total rotation: %2.3f deg", (double) math::degrees(_total_rotation));
+
+				// determine the total rotation threshold
+				// TODO: this should be done elsewhere!!!
+				float yaw_step = _param_yaw_increment.get();
+				float threshold = M_TWOPI_F - math::radians(90.0f);
+				if (yaw_step > 0) {
+					threshold = M_TWOPI_F - math::radians(yaw_step);
+				}
+
+				// want to limit to 1 rotation, so only continue rotation if not going to complete 1 full rotation
+				if (_total_rotation < threshold) {
+					continue_rotation();
+				} else { // DEBUG
+					_tracking_cmd.yaw_angle = -1.0;
+					start_rotation();
+				}
 			}
-
-			// want to limit to 1 rotation, so only continue rotation if not going to complete 1 full rotation
-			if (_total_rotation < threshold) {
-				continue_rotation();
-			}
-
-			/*
-			// if current location is w/in 5 deg of desired location, allow a stop
-			if (abs(_navigator->get_global_position()->yaw - _end_rotation_angle) <= math::radians(5.0)) {
-				// _allow_rotation_end = true;
-			} */
-
-			/*
-			if (abs(_mission_item.yaw - _end_rotation_angle) <= math::radians(5.0)) {
-				_allow_rotation_end = true;
-			}
-			*/
-
-			if (_total_rotation >= math::radians(360.0f)) {
-				printf("we have rotated through 360 degrees\n");
-				_allow_rotation_end = true;
-			}
-
-			// check to see if there is a new command, if not will just continue rotating
-			if (get_next_cmd()) {
-				mavlink_log_info(_navigator->get_mavlink_fd(), "[HUNT] reversing rotation");
-				// update the final angle
-				_end_rotation_angle = _navigator->get_global_position()->yaw;
-			}
-
-			// just go ahead and keep rotating, etc.
-			set_next_item();
-			*/
-			// rotate();
 		}
-
-
-
-		// don't use the is_mission_item_reached logic for rotation, maybe we can...?
-
-
 	}
 
 
@@ -342,7 +316,15 @@ Hunt::set_next_item()
 	}
 	case HUNT_CMD_ROTATE: {
 
-		/* change the hunt state to rotate */
+		// if we are already in a rotation state, will want to terminate that rotation first
+		if (_hunt_state == HUNT_STATE_ROTATE) {
+			end_rotation();
+		}
+
+		start_rotation();
+
+		/*
+		// change the hunt state to rotate
 		_hunt_state = HUNT_STATE_ROTATE;
 
 		if (!_in_rotation) {
@@ -364,11 +346,11 @@ Hunt::set_next_item()
 			_current_rotation_direction = 1;
 		}
 
-		/* we want to just sit in one spot */
+		// we want to just sit in one spot
 		_mission_item.lat = _navigator->get_global_position()->lat;
 		_mission_item.lon = _navigator->get_global_position()->lon;
 
-		/* if ending rotation */
+		// if ending rotation
 		if (_allow_rotation_end) {
 			// just keep the current yaw command
 			_mission_item.yaw = _navigator->get_global_position()->yaw;
@@ -389,11 +371,12 @@ Hunt::set_next_item()
 		// setting the altitude of the mission item for a rotate command (just want to use current altitude)
 		_mission_item.altitude_is_relative = false;
 		_mission_item.altitude = _navigator->get_global_position()->alt;
+		*/
 
 		break;
 	}
 	case HUNT_CMD_FINISH: {
-		/* change the hunt state to off */
+		// change the hunt state to off
 		_hunt_state = HUNT_STATE_OFF;
 
 		set_waiting();
@@ -656,7 +639,10 @@ Hunt::start_rotation()
 	struct position_setpoint_triplet_s *pos_sp_triplet = _navigator->get_position_setpoint_triplet();
 
 	// get the data from the tracking command (which direction to rotate)
-	_current_rotation_direction = -1;
+	_current_rotation_direction = (int) _tracking_cmd.yaw_angle;
+	if (_current_rotation_direction == 0) {
+		_current_rotation_direction = 1;
+	}
 
 	/* we want to just sit in one spot at the current altitude */
 	_mission_item.lat = _navigator->get_global_position()->lat;
@@ -719,6 +705,27 @@ Hunt::continue_rotation()
 		_mission_item.yaw = _navigator->get_global_position()->yaw + (float) _current_rotation_direction * math::radians(90.0f);
 	}
 	_mission_item.yaw = _wrap_pi(_mission_item.yaw);
+
+	/* convert mission item to current position setpoint and make it valid */
+	mission_item_to_position_setpoint(&_mission_item, &pos_sp_triplet->current);
+	pos_sp_triplet->next.valid = false;
+
+	_navigator->set_position_setpoint_triplet_updated();
+}
+
+
+void
+Hunt::end_rotation()
+{
+	_prev_yaw = _navigator->get_global_position()->yaw;
+
+	/* get pointer to the position setpoint from the navigator */
+	struct position_setpoint_triplet_s *pos_sp_triplet = _navigator->get_position_setpoint_triplet();
+
+	// do not need to update anything but the yaw on the mission item, want to keep everything else the same
+
+	// set the target yaw to be the current heading (+ 5 deg for some margin)
+	_mission_item.yaw = _navigator->get_global_position()->yaw + (float) _current_rotation_direction * math::radians(5.0f);
 
 	/* convert mission item to current position setpoint and make it valid */
 	mission_item_to_position_setpoint(&_mission_item, &pos_sp_triplet->current);
