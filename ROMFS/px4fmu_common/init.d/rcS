@@ -443,8 +443,8 @@ then
 	unset MAVLINK_F
 	
 	# start mavlink for jager
-	mavlink start -d /dev/ttyS2 -b 115200
-	mavlink start -d /dev/ttyS6 -b 115200
+	mavlink start -d /dev/ttyS2 -b 115200 -m onboard
+	mavlink start -d /dev/ttyS6 -b 115200 -m onboard
 
 	#
 	# MAVLink onboard / TELEM2
