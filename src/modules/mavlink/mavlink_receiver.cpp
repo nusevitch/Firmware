@@ -127,6 +127,8 @@ MavlinkReceiver::MavlinkReceiver(Mavlink *parent) :
 	_tracking_cmd_pub(-1),
 	_temp_hunt_result_pub(-1), // TEMPORARY
 	_apnt_position_pub(-1),
+	_bearing_pub(-1),
+	_rssi_pub(-1),
 	_control_mode_sub(orb_subscribe(ORB_ID(vehicle_control_mode))),
 	_hil_frames(0),
 	_old_timestamp(0),
@@ -233,7 +235,12 @@ MavlinkReceiver::handle_message(mavlink_message_t *msg)
 	case MAVLINK_MSG_ID_HUNT_MISSION_REACHED:
 		handle_message_hunt_reached(msg);
 		break;
-
+	case MAVLINK_MSG_ID_BEARING:
+			handle_message_bearing(msg);
+			break;
+	case MAVLINK_MSG_ID_RSSI:
+			handle_message_rssi(msg);
+			break;
 	default:
 		break;
 	}
@@ -1614,6 +1621,51 @@ MavlinkReceiver::handle_message_hunt_reached(mavlink_message_t *msg) {
 		_temp_hunt_result_pub = orb_advertise(ORB_ID(temp_hunt_result), &result);
 	} else {
 		orb_publish(ORB_ID(temp_hunt_result), _temp_hunt_result_pub, &result);
+	}
+}
+
+void
+MavlinkReceiver::handle_message_bearing(mavlink_message_t *msg) {
+	mavlink_bearing_t bear;
+	mavlink_msg_bearing_decode(msg, &bear);
+
+	struct hunt_bearing_s bearing;
+	memset(&bearing, 0, sizeof(bearing));
+
+	bearing.bearing = bear.bearing;
+	bearing.lat = bear.lat;
+	bearing.lon = bear.lon;
+	bearing.alt = bear.alt;
+	bearing.timestamp_us = hrt_absolute_time();
+
+
+	if (_bearing_pub < 0) {
+		_bearing_pub = orb_advertise(ORB_ID(hunt_bearing), &bearing);
+	} else {
+		orb_publish(ORB_ID(hunt_bearing), _bearing_pub, &bearing);
+	}
+}
+
+void
+MavlinkReceiver::handle_message_rssi(mavlink_message_t *msg) {
+	mavlink_rssi_t rssi_msg;
+	mavlink_msg_rssi_decode(msg, &rssi_msg);
+
+	struct hunt_rssi_s rssi;
+	memset(&rssi, 0, sizeof(rssi));
+
+	rssi.rssi = rssi_msg.rssi_value;
+	rssi.heading = rssi_msg.heading;
+	rssi.lat = rssi_msg.lat;
+	rssi.lon = rssi_msg.lon;
+	rssi.alt = rssi_msg.alt;
+	rssi.timestamp_us = hrt_absolute_time();
+
+
+	if (_rssi_pub < 0) {
+		_rssi_pub = orb_advertise(ORB_ID(hunt_rssi), &rssi);
+	} else {
+		orb_publish(ORB_ID(hunt_rssi), _rssi_pub, &rssi);
 	}
 }
 

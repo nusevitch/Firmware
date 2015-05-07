@@ -76,6 +76,8 @@
 #include <uORB/topics/apnt_position.h>
 #include <uORB/topics/temp_hunt_result.h> // TEMPORARY
 #include <uORB/topics/hunt_result.h>
+#include <uORB/topics/hunt_bearing.h>
+#include <uORB/topics/hunt_rssi.h>
 #include <drivers/drv_rc_input.h>
 #include <drivers/drv_pwm_output.h>
 #include <drivers/drv_range_finder.h>
@@ -2758,6 +2760,127 @@ protected:
 };
 
 
+class MavlinkStreamBearing : public MavlinkStream
+{
+public:
+	const char *get_name() const
+	{
+		return MavlinkStreamBearing::get_name_static();
+	}
+
+	static const char *get_name_static()
+	{
+		return "BEARING";
+	}
+
+	uint8_t get_id()
+	{
+		return MAVLINK_MSG_ID_BEARING;
+	}
+
+	static MavlinkStream *new_instance(Mavlink *mavlink)
+	{
+		return new MavlinkStreamBearing(mavlink);
+	}
+
+	unsigned get_size()
+	{
+		return MAVLINK_MSG_ID_BEARING_LEN + MAVLINK_NUM_NON_PAYLOAD_BYTES;
+	}
+
+private:
+	MavlinkOrbSubscription *bearing_sub;
+	uint64_t time;
+
+	/* do not allow top copying this class */
+	MavlinkStreamBearing(MavlinkStreamBearing &);
+	MavlinkStreamBearing& operator = (const MavlinkStreamBearing &);
+
+protected:
+	explicit MavlinkStreamBearing(Mavlink *mavlink) : MavlinkStream(mavlink),
+		bearing_sub(_mavlink->add_orb_subscription(ORB_ID(hunt_bearing))),
+		time(0)
+	{}
+
+	void send(const hrt_abstime t)
+	{
+		struct hunt_bearing_s bearing;
+
+		if (bearing_sub->update(&time, &bearing)) {
+
+			mavlink_bearing_t msg;
+			msg.bearing = bearing.bearing;
+			msg.lat = bearing.lat;
+			msg.lon = bearing.lon;
+			msg.alt = bearing.alt;
+
+			_mavlink->send_message(MAVLINK_MSG_ID_BEARING, &msg);
+		}
+	}
+};
+
+
+class MavlinkStreamRssi : public MavlinkStream
+{
+public:
+	const char *get_name() const
+	{
+		return MavlinkStreamRssi::get_name_static();
+	}
+
+	static const char *get_name_static()
+	{
+		return "BEARING";
+	}
+
+	uint8_t get_id()
+	{
+		return MAVLINK_MSG_ID_RSSI;
+	}
+
+	static MavlinkStream *new_instance(Mavlink *mavlink)
+	{
+		return new MavlinkStreamRssi(mavlink);
+	}
+
+	unsigned get_size()
+	{
+		return MAVLINK_MSG_ID_RSSI_LEN + MAVLINK_NUM_NON_PAYLOAD_BYTES;
+	}
+
+private:
+	MavlinkOrbSubscription *rssi_sub;
+	uint64_t time;
+
+	/* do not allow top copying this class */
+	MavlinkStreamRssi(MavlinkStreamRssi &);
+	MavlinkStreamRssi& operator = (const MavlinkStreamRssi &);
+
+protected:
+	explicit MavlinkStreamRssi(Mavlink *mavlink) : MavlinkStream(mavlink),
+	rssi_sub(_mavlink->add_orb_subscription(ORB_ID(hunt_rssi))),
+		time(0)
+	{}
+
+	void send(const hrt_abstime t)
+	{
+		struct hunt_rssi_s rssi;
+
+		if (rssi_sub->update(&time, &rssi)) {
+
+			mavlink_rssi_t msg;
+			msg.rssi_value = rssi.rssi;
+			msg.heading = rssi.heading;
+			msg.lat = rssi.lat;
+			msg.lon = rssi.lon;
+			msg.alt = rssi.alt;
+
+			_mavlink->send_message(MAVLINK_MSG_ID_RSSI, &msg);
+		}
+	}
+};
+
+
 StreamListItem *streams_list[] = {
 	new StreamListItem(&MavlinkStreamHeartbeat::new_instance, &MavlinkStreamHeartbeat::get_name_static),
 	new StreamListItem(&MavlinkStreamStatustext::new_instance, &MavlinkStreamStatustext::get_name_static),
@@ -2799,5 +2922,7 @@ StreamListItem *streams_list[] = {
 	new StreamListItem(&MavlinkStreamTrackingCmd::new_instance, &MavlinkStreamTrackingCmd::get_name_static),
 	new StreamListItem(&MavlinkStreamHuntReached::new_instance, &MavlinkStreamHuntReached::get_name_static),
 	new StreamListItem(&MavlinkStreamApntPosition::new_instance, &MavlinkStreamApntPosition::get_name_static),
+	new StreamListItem(&MavlinkStreamBearing::new_instance, &MavlinkStreamBearing::get_name_static),
+	new StreamListItem(&MavlinkStreamRssi::new_instance, &MavlinkStreamRssi::get_name_static),
 	nullptr
 };
