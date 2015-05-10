@@ -62,3 +62,36 @@ f *   Copyright (c) 2013 PX4 Development Team. All rights reserved.
  */
 PARAM_DEFINE_FLOAT(HUNT_YAW_STEP, 10.0f);
 
+/**
+ * Start Latitude.
+ *
+ * The latitude in decimal degrees of the starting location for hunting.
+ *
+ * @unit degrees
+ * @min 0.0
+ * @group Hunt Params
+ */
+PARAM_DEFINE_FLOAT(HUNT_STRT_LAT,  37.423703f);
+
+/**
+ * Start Longitude.
+ *
+ * The longitude in decimal degrees of the starting location for hunting.
+ *
+ * @unit degrees
+ * @min 0.0
+ * @group Hunt Params
+ */
+PARAM_DEFINE_FLOAT(HUNT_STRT_LON, -122.176883f);
+
+/**
+ * Start Altitude.
+ *
+ * The altitude in m AMSL of the starting location for hunting.
+ *
+ * @unit m
+ * @min 0.0
+ * @group Hunt Params
+ */
+PARAM_DEFINE_FLOAT(HUNT_STRT_ALT, 40.0f);
+

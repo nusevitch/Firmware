@@ -32,6 +32,10 @@ Hunt::Hunt(Navigator *navigator, const char *name) :
 
 /* params */
 	_param_yaw_increment(this, "HUNT_YAW_STEP", false),
+	_param_start_lat(this, "HUNT_STRT_LAT", false),
+	_param_start_lon(this, "HUNT_STRT_LON", false),
+	_param_start_alt(this, "HUNT_STRT_ALT", false),
+
 
 /* subscriptions */
 	_local_pos_sub(-1),
@@ -104,44 +108,34 @@ Hunt::on_activation()
 
 		_started = true;
 
-
+		move_to_start();
 
 	} else {
 		// need to check if we are at the last location
 		// if not at the last commanded location, go to last commanded location
+
+		// update our copy of the local position
+		update_local_position();
+
+		// update the reference position
+		update_reference_position();
+
+
+		// create a mission item for the current location
+		_mission_item.lat = _navigator->get_global_position()->lat;
+		_mission_item.lon = _navigator->get_global_position()->lon;
+		_mission_item.altitude = _navigator->get_global_position()->alt;
+		_mission_item.altitude_is_relative = false;
+
+		// XXX: FOR NOW JUST GO INTO WAITING MODE REGARDLESS OF PREVIOUS START MODE
+		_hunt_state = HUNT_STATE_WAIT;
+		set_waiting(); // trigger it loitering just for safety
+
+		// broadcast the status change
+		// TODO: make change the state a function, will better outline the state machine...
+		report_status();
+
 	}
-
-	// update our copy of the local position
-	update_local_position();
-
-	// update the reference position
-	update_reference_position();
-
-
-	// create a mission item for the current location
-	_mission_item.lat = _navigator->get_global_position()->lat;
-	_mission_item.lon = _navigator->get_global_position()->lon;
-	_mission_item.altitude = _navigator->get_global_position()->alt;
-	_mission_item.altitude_is_relative = false;
-
-	// XXX: FOR NOW JUST GO INTO WAITING MODE REGARDLESS OF PREVIOUS START MODE
-	_hunt_state = HUNT_STATE_WAIT;
-	set_waiting(); // trigger it loitering just for safety
-
-	// broadcast the status change
-	// TODO: make change the state a function, will better outline the state machine...
-	report_status();
-
-	// TESTING
-	// _tracking_cmd.yaw_angle = 1.0;
-	// start_rotation();
-	// report_status();
-
-	// set the created mission item to a position setpoint?
-	// also handle some of the states??
-	// XXX: not necessarily a mission item yet, so definitely do not set the next mission item
-	// set_next_item();
-
 }
 
 void
@@ -307,7 +301,7 @@ Hunt::set_next_item()
 		/* get desired north and east distances of travel */
 		set_mission_latlon();
 
-		_mission_item.yaw = math::radians(90.0f);	// for now just go with point north
+		_mission_item.yaw = 0.0f; // math::radians(90.0f);	// for now just go with point north
 
 		// setting the altitude of the mission item for a move command
 		_mission_item.altitude_is_relative = false;
@@ -322,57 +316,12 @@ Hunt::set_next_item()
 			end_rotation();
 		}
 
-		start_rotation();
-
-		/*
-		// change the hunt state to rotate
+		/* change the hunt state to rotate */
 		_hunt_state = HUNT_STATE_ROTATE;
+		mavlink_log_info(_navigator->get_mavlink_fd(), "[HUNT] rotating");
 
-		if (!_in_rotation) {
-
-			mavlink_log_info(_navigator->get_mavlink_fd(), "[HUNT] rotating");
-			_in_rotation = true;
-			_end_rotation_angle = _navigator->get_global_position()->yaw; // want to rotate 360 degrees
-			_total_rotation = 0.0f;
-			_allow_rotation_end = false;
-			_prev_angle = _end_rotation_angle;
-
-			printf("[HUNT] setting to be in rotation\n");
-			printf("setting end rotation angle to %f\n", (double) _end_rotation_angle);
-		}
-
-		_current_rotation_direction = (int) _tracking_cmd.yaw_angle;
-
-		if (_current_rotation_direction == 0) {
-			_current_rotation_direction = 1;
-		}
-
-		// we want to just sit in one spot
-		_mission_item.lat = _navigator->get_global_position()->lat;
-		_mission_item.lon = _navigator->get_global_position()->lon;
-
-		// if ending rotation
-		if (_allow_rotation_end) {
-			// just keep the current yaw command
-			_mission_item.yaw = _navigator->get_global_position()->yaw;
-		} else {
-			float yaw_step = _param_yaw_increment.get();
-			if (yaw_step > 0) {
-			_mission_item.yaw = _navigator->get_global_position()->yaw + (float) _current_rotation_direction * math::radians(yaw_step);
-			} else {
-			_mission_item.yaw = _navigator->get_global_position()->yaw + (float) _current_rotation_direction * math::radians(45.0f);
-			}
-			_mission_item.yaw = _wrap_pi(_mission_item.yaw);
-
-			printf("setting yaw sp to %f\n", (double) _mission_item.yaw);
-		}
-
-
-
-		// setting the altitude of the mission item for a rotate command (just want to use current altitude)
-		_mission_item.altitude_is_relative = false;
-		_mission_item.altitude = _navigator->get_global_position()->alt;
-		*/
+		// do the management for starting a rotation
+		start_rotation();
 
 		break;
 	}
@@ -396,21 +345,15 @@ Hunt::set_next_item()
 
 	}
 
-
-	// loiter radius and direction will be same, regardless of cmd type
-	_mission_item.loiter_radius = _navigator->get_loiter_radius();
+	// do all the general constant stuff (same for all mission items)
+	_mission_item.loiter_radius = _navigator->get_loiter_radius();	// loiter radius and direction will be same, regardless of cmd type
 	_mission_item.loiter_direction = 1;
-
-	// nav cmd will be waypoint regardless of cmd type
-	_mission_item.nav_cmd = NAV_CMD_WAYPOINT;
-
-	// all other odds and ends of mission item will be the same regardless of cmd type
+	_mission_item.nav_cmd = NAV_CMD_WAYPOINT;						// nav cmd will be waypoint regardless of cmd type
 	_mission_item.acceptance_radius = _navigator->get_acceptance_radius();
 	_mission_item.time_inside = 0.0f;
 	_mission_item.pitch_min = 0.0f;
 	_mission_item.autocontinue = false;
 	_mission_item.origin = ORIGIN_TRACKING;
-
 
 	// need to reset the mission item reached info
 	// XXX: THIS MAY BE UNNECESSARY??
@@ -427,6 +370,7 @@ Hunt::set_next_item()
 
 	// status must have changed if at this point, so report it
 	report_status();
+
 }
 
 
@@ -626,18 +570,11 @@ Hunt::rotate()
 void
 Hunt::start_rotation()
 {
-	/* change the hunt state to rotate */
-	_hunt_state = HUNT_STATE_ROTATE;
 
-	// do some of the preliminary stuff for rotation management
-	mavlink_log_info(_navigator->get_mavlink_fd(), "[HUNT] rotating");
 	_in_rotation = true;
 	_end_rotation_angle = _navigator->get_global_position()->yaw; // want to rotate 360 degrees
 	_prev_yaw = _navigator->get_global_position()->yaw;
 	_total_rotation = 0.0f;
-
-	/* get pointer to the position setpoint from the navigator */
-	struct position_setpoint_triplet_s *pos_sp_triplet = _navigator->get_position_setpoint_triplet();
 
 	// get the data from the tracking command (which direction to rotate)
 	_current_rotation_direction = (int) _tracking_cmd.yaw_angle;
@@ -660,32 +597,6 @@ Hunt::start_rotation()
 	}
 	_mission_item.yaw = _wrap_pi(_mission_item.yaw);
 
-
-	// do all the general constant stuff (same for all mission items)
-	_mission_item.loiter_radius = _navigator->get_loiter_radius();	// loiter radius and direction will be same, regardless of cmd type
-	_mission_item.loiter_direction = 1;
-	_mission_item.nav_cmd = NAV_CMD_WAYPOINT;						// nav cmd will be waypoint regardless of cmd type
-	_mission_item.acceptance_radius = _navigator->get_acceptance_radius();
-	_mission_item.time_inside = 0.0f;
-	_mission_item.pitch_min = 0.0f;
-	_mission_item.autocontinue = false;
-	_mission_item.origin = ORIGIN_TRACKING;
-
-	// need to reset the mission item reached info
-	// XXX: THIS MAY BE UNNECESSARY??
-	reset_mission_item_reached();
-
-	/* convert mission item to current position setpoint and make it valid */
-	mission_item_to_position_setpoint(&_mission_item, &pos_sp_triplet->current);
-	pos_sp_triplet->next.valid = false;
-
-	_navigator->set_position_setpoint_triplet_updated();
-
-	// report the new cmd id
-	report_cmd_id();
-
-	// status must have changed if at this point, so report it
-	report_status();
 }
 
 void
@@ -733,5 +644,59 @@ Hunt::end_rotation()
 	pos_sp_triplet->next.valid = false;
 
 	_navigator->set_position_setpoint_triplet_updated();
+}
+
+
+void
+Hunt::move_to_start()
+{
+	// set the hunt state to move (since we are moving)
+	_hunt_state = HUNT_STATE_MOVE;
+
+	/* get pointer to the position setpoint from the navigator */
+	struct position_setpoint_triplet_s *pos_sp_triplet = _navigator->get_position_setpoint_triplet();
+
+	float start_lat = _param_start_lat.get();
+	float start_lon = _param_start_lon.get();
+	float start_alt = _param_start_alt.get();
+
+	_mission_item.lat = (double) start_lat;
+	_mission_item.lon = (double) start_lon;
+	_mission_item.altitude = start_alt;
+	_mission_item.altitude_is_relative = false;
+
+	_mission_item.yaw = 0.0f;
+
+	// loiter radius and direction will be same, regardless of cmd type
+	_mission_item.loiter_radius = _navigator->get_loiter_radius();
+	_mission_item.loiter_direction = 1;
+
+	// nav cmd will be waypoint regardless of cmd type
+	_mission_item.nav_cmd = NAV_CMD_WAYPOINT;
+
+	// all other odds and ends of mission item will be the same regardless of cmd type
+	_mission_item.acceptance_radius = _navigator->get_acceptance_radius();
+	_mission_item.time_inside = 0.0f;
+	_mission_item.pitch_min = 0.0f;
+	_mission_item.autocontinue = false;
+	_mission_item.origin = ORIGIN_TRACKING;
+
+
+	// need to reset the mission item reached info
+	// XXX: THIS MAY BE UNNECESSARY??
+	reset_mission_item_reached();
+
+	/* convert mission item to current position setpoint and make it valid */
+	mission_item_to_position_setpoint(&_mission_item, &pos_sp_triplet->current);
+	pos_sp_triplet->next.valid = false;
+
+	_navigator->set_position_setpoint_triplet_updated();
+
+	// report the new cmd id
+	report_cmd_id();
+
+	// status must have changed if at this point, so report it
+	report_status();
+
 }
 

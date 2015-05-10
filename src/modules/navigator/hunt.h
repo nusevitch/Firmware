@@ -126,6 +126,13 @@ private:
 	 */
 	void end_rotation();
 
+
+	/*
+	 * Set a mission item for the starting location in order to move Jager
+	 * to the desired starting location (as set in the parameters).
+	 */
+	void move_to_start();
+
 	/**
 	 * states that the hunt script can be in
 	 * will be used to help identify whether we
@@ -151,6 +158,9 @@ private:
 
 	/* params */
 	control::BlockParamFloat _param_yaw_increment;
+	control::BlockParamFloat _param_start_lat;
+	control::BlockParamFloat _param_start_lon;
+	control::BlockParamFloat _param_start_alt;
 
 	int _local_pos_sub; /**< subscription to the local position */
 
