@@ -162,7 +162,7 @@ MODULES		+= examples/rover_steering_control
 GEN_PARAM_XML = 1
 #
 # APNT test module
-# MODULES += modules/everything_is_awesome
+MODULES += modules/everything_is_awesome
 
 #
 # Odroid Sim module
