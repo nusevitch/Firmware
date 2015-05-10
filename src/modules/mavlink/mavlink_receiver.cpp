@@ -220,27 +220,34 @@ MavlinkReceiver::handle_message(mavlink_message_t *msg)
 	case MAVLINK_MSG_ID_APNT_GPS_STATUS:
 		handle_message_apnt_gps_status(msg);
 		break;
+
 	case MAVLINK_MSG_ID_APNT_SITE_STATUS:
 		handle_message_apnt_site_status(msg);
 		break;
+
 	case MAVLINK_MSG_ID_TRACKING_STATUS:
 		handle_message_tracking_status(msg);
 		break;
+
 	case MAVLINK_MSG_ID_APNT_POSITION:
 		handle_message_apnt_position(msg);
 		break;
+
 	case MAVLINK_MSG_ID_TRACKING_CMD:
 		handle_message_tracking_cmd(msg);
 		break;
+
 	case MAVLINK_MSG_ID_HUNT_MISSION_REACHED:
 		handle_message_hunt_reached(msg);
 		break;
+
 	case MAVLINK_MSG_ID_BEARING:
-			handle_message_bearing(msg);
-			break;
+		handle_message_bearing(msg);
+		break;
+
 	case MAVLINK_MSG_ID_RSSI:
-			handle_message_rssi(msg);
-			break;
+		handle_message_rssi(msg);
+		break;
 	default:
 		break;
 	}
@@ -1648,6 +1655,7 @@ MavlinkReceiver::handle_message_bearing(mavlink_message_t *msg) {
 
 void
 MavlinkReceiver::handle_message_rssi(mavlink_message_t *msg) {
+
 	mavlink_rssi_t rssi_msg;
 	mavlink_msg_rssi_decode(msg, &rssi_msg);
 
