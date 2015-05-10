@@ -132,9 +132,10 @@ Hunt::on_activation()
 	// TODO: make change the state a function, will better outline the state machine...
 	report_status();
 
-	_tracking_cmd.yaw_angle = 1.0;
-	start_rotation();
-	report_status();
+	// TESTING
+	// _tracking_cmd.yaw_angle = 1.0;
+	// start_rotation();
+	// report_status();
 
 	// set the created mission item to a position setpoint?
 	// also handle some of the states??
@@ -221,8 +222,9 @@ Hunt::on_active()
 				if (_total_rotation < threshold) {
 					continue_rotation();
 				} else { // DEBUG
-					_tracking_cmd.yaw_angle = -1.0;
-					start_rotation();
+					// TESTING
+					// _tracking_cmd.yaw_angle = -1.0;
+					// start_rotation();
 				}
 			}
 		}
@@ -240,14 +242,13 @@ Hunt::on_active()
 		// -------------------------------------- //
 		// rotate();
 
-		/*
+
 		if (get_next_cmd()) {
 			// new command has come from tracking
 			set_next_item();
 
 			// set next item will handle the state change to a none wait state
 		}
-		 */
 	}
 
 	// always report the status here, just so there is a constant new mavlink message
