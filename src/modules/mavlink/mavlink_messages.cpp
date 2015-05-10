@@ -2830,7 +2830,7 @@ public:
 
 	static const char *get_name_static()
 	{
-		return "BEARING";
+		return "RSSI";
 	}
 
 	uint8_t get_id()
