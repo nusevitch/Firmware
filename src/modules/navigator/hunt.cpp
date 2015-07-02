@@ -301,7 +301,7 @@ Hunt::set_next_item()
 		/* get desired north and east distances of travel */
 		set_mission_latlon();
 
-		_mission_item.yaw = 0.0f; // math::radians(90.0f);	// for now just go with point north
+		_mission_item.yaw = math::radians(270.0f);	// for now just go with point north
 
 		// setting the altitude of the mission item for a move command
 		_mission_item.altitude_is_relative = false;
