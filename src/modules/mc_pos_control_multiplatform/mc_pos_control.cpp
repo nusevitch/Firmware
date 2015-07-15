@@ -69,27 +69,27 @@ MulticopterPositionControl::MulticopterPositionControl() :
 
 	/* parameters */
 	_params_handles({
-		.thr_min	    = px4::ParameterFloat("MPC_THR_MIN", PARAM_MPC_THR_MIN_DEFAULT),
-		.thr_max	    = px4::ParameterFloat("MPC_THR_MAX", PARAM_MPC_THR_MAX_DEFAULT),
-		.z_p		    = px4::ParameterFloat("MPC_Z_P", PARAM_MPC_Z_P_DEFAULT),
-		.z_vel_p	    = px4::ParameterFloat("MPC_Z_VEL_P", PARAM_MPC_Z_VEL_P_DEFAULT),
-		.z_vel_i	    = px4::ParameterFloat("MPC_Z_VEL_I", PARAM_MPC_Z_VEL_I_DEFAULT),
-		.z_vel_d	    = px4::ParameterFloat("MPC_Z_VEL_D", PARAM_MPC_Z_VEL_D_DEFAULT),
-		.z_vel_max	    = px4::ParameterFloat("MPC_Z_VEL_MAX", PARAM_MPC_Z_VEL_MAX_DEFAULT),
-		.z_ff		    = px4::ParameterFloat("MPC_Z_FF", PARAM_MPC_Z_FF_DEFAULT),
-		.xy_p		    = px4::ParameterFloat("MPC_XY_P", PARAM_MPC_XY_P_DEFAULT),
-		.xy_vel_p	    = px4::ParameterFloat("MPC_XY_VEL_P", PARAM_MPC_XY_VEL_P_DEFAULT),
-		.xy_vel_i	    = px4::ParameterFloat("MPC_XY_VEL_I", PARAM_MPC_XY_VEL_I_DEFAULT),
-		.xy_vel_d	    = px4::ParameterFloat("MPC_XY_VEL_D", PARAM_MPC_XY_VEL_D_DEFAULT),
-		.xy_vel_max	    = px4::ParameterFloat("MPC_XY_VEL_MAX", PARAM_MPC_XY_VEL_MAX_DEFAULT),
-		.xy_ff		    = px4::ParameterFloat("MPC_XY_FF", PARAM_MPC_XY_FF_DEFAULT),
-		.tilt_max_air	    = px4::ParameterFloat("MPC_TILTMAX_AIR", PARAM_MPC_TILTMAX_AIR_DEFAULT),
-		.land_speed	    = px4::ParameterFloat("MPC_LAND_SPEED", PARAM_MPC_LAND_SPEED_DEFAULT),
-		.tilt_max_land	    = px4::ParameterFloat("MPC_TILTMAX_LND", PARAM_MPC_TILTMAX_LND_DEFAULT),
-		.man_roll_max	    = px4::ParameterFloat("MPC_MAN_R_MAX", PARAM_MPC_MAN_R_MAX_DEFAULT),
-		.man_pitch_max	    = px4::ParameterFloat("MPC_MAN_P_MAX", PARAM_MPC_MAN_P_MAX_DEFAULT),
-		.man_yaw_max	    = px4::ParameterFloat("MPC_MAN_Y_MAX", PARAM_MPC_MAN_Y_MAX_DEFAULT),
-		.mc_att_yaw_p	    = px4::ParameterFloat("MC_YAW_P", PARAM_MC_YAW_P_DEFAULT)
+		.thr_min	    = px4::ParameterFloat("MPP_THR_MIN", PARAM_MPP_THR_MIN_DEFAULT),
+		.thr_max	    = px4::ParameterFloat("MPP_THR_MAX", PARAM_MPP_THR_MAX_DEFAULT),
+		.z_p		    = px4::ParameterFloat("MPP_Z_P", PARAM_MPP_Z_P_DEFAULT),
+		.z_vel_p	    = px4::ParameterFloat("MPP_Z_VEL_P", PARAM_MPP_Z_VEL_P_DEFAULT),
+		.z_vel_i	    = px4::ParameterFloat("MPP_Z_VEL_I", PARAM_MPP_Z_VEL_I_DEFAULT),
+		.z_vel_d	    = px4::ParameterFloat("MPP_Z_VEL_D", PARAM_MPP_Z_VEL_D_DEFAULT),
+		.z_vel_max	    = px4::ParameterFloat("MPP_Z_VEL_MAX", PARAM_MPP_Z_VEL_MAX_DEFAULT),
+		.z_ff		    = px4::ParameterFloat("MPP_Z_FF", PARAM_MPP_Z_FF_DEFAULT),
+		.xy_p		    = px4::ParameterFloat("MPP_XY_P", PARAM_MPP_XY_P_DEFAULT),
+		.xy_vel_p	    = px4::ParameterFloat("MPP_XY_VEL_P", PARAM_MPP_XY_VEL_P_DEFAULT),
+		.xy_vel_i	    = px4::ParameterFloat("MPP_XY_VEL_I", PARAM_MPP_XY_VEL_I_DEFAULT),
+		.xy_vel_d	    = px4::ParameterFloat("MPP_XY_VEL_D", PARAM_MPP_XY_VEL_D_DEFAULT),
+		.xy_vel_max	    = px4::ParameterFloat("MPP_XY_VEL_MAX", PARAM_MPP_XY_VEL_MAX_DEFAULT),
+		.xy_ff		    = px4::ParameterFloat("MPP_XY_FF", PARAM_MPP_XY_FF_DEFAULT),
+		.tilt_max_air	    = px4::ParameterFloat("MPP_TILTMAX_AIR", PARAM_MPP_TILTMAX_AIR_DEFAULT),
+		.land_speed	    = px4::ParameterFloat("MPP_LAND_SPEED", PARAM_MPP_LAND_SPEED_DEFAULT),
+		.tilt_max_land	    = px4::ParameterFloat("MPP_TILTMAX_LND", PARAM_MPP_TILTMAX_LND_DEFAULT),
+		.man_roll_max	    = px4::ParameterFloat("MPP_MAN_R_MAX", PARAM_MPP_MAN_R_MAX_DEFAULT),
+		.man_pitch_max	    = px4::ParameterFloat("MPP_MAN_P_MAX", PARAM_MPP_MAN_P_MAX_DEFAULT),
+		.man_yaw_max	    = px4::ParameterFloat("MPP_MAN_Y_MAX", PARAM_MPP_MAN_Y_MAX_DEFAULT),
+		.mc_att_yaw_p	    = px4::ParameterFloat("MP_YAW_P", PARAM_MP_YAW_P_DEFAULT)
 	}),
 	_ref_alt(0.0f),
 	_ref_timestamp(0),
@@ -647,6 +647,21 @@ void  MulticopterPositionControl::handle_vehicle_attitude(const px4_vehicle_atti
 
 			_vel_sp = pos_err.emult(_params.pos_p) + _vel_ff;
 
+			/* make sure velocity setpoint is saturated in xy*/
+			float vel_norm_xy = sqrtf(_vel_sp(0)*_vel_sp(0) +
+				_vel_sp(1)*_vel_sp(1));
+			if (vel_norm_xy > _params.vel_max(0)) {
+				/* note assumes vel_max(0) == vel_max(1) */
+				_vel_sp(0) = _vel_sp(0)*_params.vel_max(0)/vel_norm_xy;
+				_vel_sp(1) = _vel_sp(1)*_params.vel_max(1)/vel_norm_xy;
+			}
+
+			/* make sure velocity setpoint is saturated in z*/
+			float vel_norm_z = sqrtf(_vel_sp(2)*_vel_sp(2));
+			if (vel_norm_z > _params.vel_max(2)) {
+				_vel_sp(2) = _vel_sp(2)*_params.vel_max(2)/vel_norm_z;
+			}
+
 			if (!_control_mode->data().flag_control_altitude_enabled) {
 				_reset_alt_sp = true;
 				_vel_sp(2) = 0.0f;
@@ -922,8 +937,8 @@ void  MulticopterPositionControl::handle_vehicle_attitude(const px4_vehicle_atti
 
 				/* save thrust setpoint for logging */
 				_local_pos_sp_msg.data().acc_x = thrust_sp(0);
-				_local_pos_sp_msg.data().acc_x = thrust_sp(1);
-				_local_pos_sp_msg.data().acc_x = thrust_sp(2);
+				_local_pos_sp_msg.data().acc_y = thrust_sp(1);
+				_local_pos_sp_msg.data().acc_z = thrust_sp(2);
 
 				_att_sp_msg.data().timestamp = get_time_micros();
 

@@ -193,12 +193,14 @@ private:
 		float trim_roll;
 		float trim_pitch;
 		float trim_yaw;
-		float rollsp_offset_deg;			/**< Roll Setpoint Offset in deg */
-		float pitchsp_offset_deg;			/**< Pitch Setpoint Offset in deg */
-		float rollsp_offset_rad;			/**< Roll Setpoint Offset in rad */
-		float pitchsp_offset_rad;			/**< Pitch Setpoint Offset in rad */
-		float man_roll_max;						/**< Max Roll in rad */
-		float man_pitch_max;					/**< Max Pitch in rad */
+		float rollsp_offset_deg;		/**< Roll Setpoint Offset in deg */
+		float pitchsp_offset_deg;		/**< Pitch Setpoint Offset in deg */
+		float rollsp_offset_rad;		/**< Roll Setpoint Offset in rad */
+		float pitchsp_offset_rad;		/**< Pitch Setpoint Offset in rad */
+		float man_roll_max;				/**< Max Roll in rad */
+		float man_pitch_max;			/**< Max Pitch in rad */
+
+		int vtol_type;					/**< VTOL type: 0 = tailsitter, 1 = tiltrotor */
 
 	}		_parameters;			/**< local copies of interesting parameters */
 
@@ -240,6 +242,8 @@ private:
 		param_t pitchsp_offset_deg;
 		param_t man_roll_max;
 		param_t man_pitch_max;
+
+		param_t vtol_type;
 
 	}		_parameter_handles;		/**< handles for interesting parameters */
 
@@ -404,6 +408,8 @@ FixedwingAttitudeControl::FixedwingAttitudeControl() :
 	_parameter_handles.man_roll_max = param_find("FW_MAN_R_MAX");
 	_parameter_handles.man_pitch_max = param_find("FW_MAN_P_MAX");
 
+	_parameter_handles.vtol_type = param_find("VT_TYPE");
+
 	/* fetch initial parameter values */
 	parameters_update();
 }
@@ -481,6 +487,8 @@ FixedwingAttitudeControl::parameters_update()
 	_parameters.man_roll_max = math::radians(_parameters.man_roll_max);
 	_parameters.man_pitch_max = math::radians(_parameters.man_pitch_max);
 
+	param_get(_parameter_handles.vtol_type, &_parameters.vtol_type);
+
 	/* pitch control parameters */
 	_pitch_ctrl.set_time_constant(_parameters.tconst);
 	_pitch_ctrl.set_k_p(_parameters.p_p);
@@ -520,7 +528,7 @@ FixedwingAttitudeControl::vehicle_control_mode_poll()
 	orb_check(_vcontrol_mode_sub, &vcontrol_mode_updated);
 
 	if (vcontrol_mode_updated) {
-		
+
 		orb_copy(ORB_ID(vehicle_control_mode), _vcontrol_mode_sub, &_vcontrol_mode);
 	}
 }
@@ -619,11 +627,6 @@ FixedwingAttitudeControl::task_main_trampoline(int argc, char *argv[])
 void
 FixedwingAttitudeControl::task_main()
 {
-
-	/* inform about start */
-	warnx("Initializing..");
-	fflush(stdout);
-
 	/*
 	 * do subscriptions
 	 */
@@ -639,8 +642,9 @@ FixedwingAttitudeControl::task_main()
 
 	/* rate limit vehicle status updates to 5Hz */
 	orb_set_interval(_vcontrol_mode_sub, 200);
-	/* rate limit attitude control to 50 Hz (with some margin, so 17 ms) */
-	orb_set_interval(_att_sub, 17);
+	/* do not limit the attitude updates in order to minimize latency.
+	 * actuator outputs are still limited by the individual drivers
+	 * properly to not saturate IO or physical limitations */
 
 	parameters_update();
 
@@ -707,10 +711,8 @@ FixedwingAttitudeControl::task_main()
 			/* load local copies */
 			orb_copy(ORB_ID(vehicle_attitude), _att_sub, &_att);
 
-			if (_vehicle_status.is_vtol) {
-				/* vehicle type is VTOL, need to modify attitude!
-				 * The following modification to the attitude is vehicle specific and in this case applies
-				 *  to tail-sitter models !!!
+			if (_vehicle_status.is_vtol && _parameters.vtol_type == 0) {
+				/* vehicle is a tailsitter, we need to modify the estimated attitude for fw mode
 				 *
 				 * Since the VTOL airframe is initialized as a multicopter we need to
 				 * modify the estimated attitude for the fixed wing operation.
@@ -801,6 +803,14 @@ FixedwingAttitudeControl::task_main()
 				//warnx("_actuators_airframe.control[1] = -1.0f;");
 			}
 
+			/* default flaps to center */
+			float flaps_control = 0.0f;
+
+			/* map flaps by default to manual if valid */
+			if (isfinite(_manual.flaps)) {
+				flaps_control = _manual.flaps;
+			}
+
 			/* decide if in stabilized or full manual control */
 
 			if (_vcontrol_mode.flag_control_attitude_enabled) {
@@ -859,11 +869,36 @@ FixedwingAttitudeControl::task_main()
 						_yaw_ctrl.reset_integrator();
 					}
 				} else if (_vcontrol_mode.flag_control_velocity_enabled) {
+
+					/* the pilot does not want to change direction,
+					 * take straight attitude setpoint from position controller
+					 */
+					if (fabsf(_manual.y) < 0.01f && fabsf(_att.roll) < 0.2f) {
+						roll_sp = _att_sp.roll_body + _parameters.rollsp_offset_rad;
+					} else {
+						roll_sp = (_manual.y * _parameters.man_roll_max)
+								+ _parameters.rollsp_offset_rad;
+					}
+
+					pitch_sp = _att_sp.pitch_body + _parameters.pitchsp_offset_rad;
+					throttle_sp = _att_sp.thrust;
+
+					/* reset integrals where needed */
+					if (_att_sp.roll_reset_integral) {
+						_roll_ctrl.reset_integrator();
+					}
+					if (_att_sp.pitch_reset_integral) {
+						_pitch_ctrl.reset_integrator();
+					}
+					if (_att_sp.yaw_reset_integral) {
+						_yaw_ctrl.reset_integrator();
+					}
+
+				} else if (_vcontrol_mode.flag_control_altitude_enabled) {
  					/*
 					 * Velocity should be controlled and manual is enabled.
 					*/
-					roll_sp = (_manual.y * _parameters.man_roll_max - _parameters.trim_roll)
-											+ _parameters.rollsp_offset_rad;
+					roll_sp = (_manual.y * _parameters.man_roll_max) + _parameters.rollsp_offset_rad;
 					pitch_sp = _att_sp.pitch_body + _parameters.pitchsp_offset_rad;
 					throttle_sp = _att_sp.thrust;
 
@@ -890,14 +925,11 @@ FixedwingAttitudeControl::task_main()
 					 * the intended attitude setpoint. Later, after the rate control step the
 					 * trim is added again to the control signal.
 					 */
-					roll_sp = (_manual.y * _parameters.man_roll_max - _parameters.trim_roll)
-						+ _parameters.rollsp_offset_rad;
-					pitch_sp = -(_manual.x * _parameters.man_pitch_max - _parameters.trim_pitch)
-						+ _parameters.pitchsp_offset_rad;
+					roll_sp = (_manual.y * _parameters.man_roll_max) + _parameters.rollsp_offset_rad;
+					pitch_sp = -(_manual.x * _parameters.man_pitch_max) + _parameters.pitchsp_offset_rad;
 					/* allow manual control of rudder deflection */
 					yaw_manual = _manual.r;
 					throttle_sp = _manual.z;
-					_actuators.control[4] = _manual.flaps;
 
 					/*
 					 * in manual mode no external source should / does emit attitude setpoints.
@@ -1060,13 +1092,13 @@ FixedwingAttitudeControl::task_main()
 
 			} else {
 				/* manual/direct control */
-				_actuators.control[0] = _manual.y;
-				_actuators.control[1] = -_manual.x;
-				_actuators.control[2] = _manual.r;
-				_actuators.control[3] = _manual.z;
-				_actuators.control[4] = _manual.flaps;
+				_actuators.control[actuator_controls_s::INDEX_ROLL] = _manual.y + _parameters.trim_roll;
+				_actuators.control[actuator_controls_s::INDEX_PITCH] = -_manual.x + _parameters.trim_pitch;
+				_actuators.control[actuator_controls_s::INDEX_YAW] = _manual.r + _parameters.trim_yaw;
+				_actuators.control[actuator_controls_s::INDEX_THROTTLE] = _manual.z;
 			}
 
+			_actuators.control[actuator_controls_s::INDEX_FLAPS] = flaps_control;
 			_actuators.control[5] = _manual.aux1;
 			_actuators.control[6] = _manual.aux2;
 			_actuators.control[7] = _manual.aux3;
@@ -1079,7 +1111,8 @@ FixedwingAttitudeControl::task_main()
 
 			/* Only publish if any of the proper modes are enabled */
 			if(_vcontrol_mode.flag_control_rates_enabled ||
-			   _vcontrol_mode.flag_control_attitude_enabled)
+			   _vcontrol_mode.flag_control_attitude_enabled ||
+			   _vcontrol_mode.flag_control_manual_enabled)
 			{
 				/* publish the actuator controls */
 				if (_actuators_0_pub > 0) {
@@ -1133,8 +1166,9 @@ FixedwingAttitudeControl::start()
 
 int fw_att_control_main(int argc, char *argv[])
 {
-	if (argc < 1)
+	if (argc < 2) {
 		errx(1, "usage: fw_att_control {start|stop|status}");
+	}
 
 	if (!strcmp(argv[1], "start")) {
 
@@ -1152,14 +1186,17 @@ int fw_att_control_main(int argc, char *argv[])
 			err(1, "start failed");
 		}
 
-		/* avoid memory fragmentation by not exiting start handler until the task has fully started */
-		while (att_control::g_control == nullptr || !att_control::g_control->task_running()) {
-			usleep(50000);
-			printf(".");
-			fflush(stdout);
-		}
-		printf("\n");
+		/* check if the waiting is necessary at all */
+		if (att_control::g_control == nullptr || !att_control::g_control->task_running()) {
 
+			/* avoid memory fragmentation by not exiting start handler until the task has fully started */
+			while (att_control::g_control == nullptr || !att_control::g_control->task_running()) {
+				usleep(50000);
+				printf(".");
+				fflush(stdout);
+			}
+			printf("\n");
+		}
 		exit(0);
 	}
 

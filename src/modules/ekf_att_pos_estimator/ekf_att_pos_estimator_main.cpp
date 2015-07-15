@@ -71,6 +71,11 @@ static uint64_t IMUusec = 0;
 static constexpr float rc = 10.0f;	// RC time constant of 1st order LPF in seconds
 static constexpr uint64_t FILTER_INIT_DELAY = 1 * 1000 * 1000; 	///< units: microseconds
 static constexpr float POS_RESET_THRESHOLD = 5.0f; 				///< Seconds before we signal a total GPS failure
+static constexpr unsigned MAG_SWITCH_HYSTERESIS = 10;	///< Ignore the first few mag failures (which amounts to a few milliseconds)
+static constexpr unsigned GYRO_SWITCH_HYSTERESIS = 5;	///< Ignore the first few gyro failures (which amounts to a few milliseconds)
+static constexpr unsigned ACCEL_SWITCH_HYSTERESIS = 5;	///< Ignore the first few accel failures (which amounts to a few milliseconds)
+static constexpr float EPH_LARGE_VALUE = 1000.0f;
+static constexpr float EPV_LARGE_VALUE = 1000.0f;
 
 /**
  * estimator app start / stop handling function
@@ -132,72 +137,70 @@ AttitudePositionEstimatorEKF::AttitudePositionEstimatorEKF() :
 	_wind_pub(-1),
 
 	_att({}),
-     _gyro({}),
-     _accel({}),
-     _mag({}),
-     _airspeed({}),
-     _baro({}),
-     _vstatus({}),
-     _global_pos({}),
-     _local_pos({}),
-     _gps({}),
-     _wind({}),
-     _distance {},
-     _landDetector {},
-     _armed {},
+    _gyro({}),
+    _accel({}),
+    _mag({}),
+    _airspeed({}),
+    _baro({}),
+    _vstatus({}),
+    _global_pos({}),
+    _local_pos({}),
+    _gps({}),
+    _wind({}),
+    _distance {},
+    _landDetector {},
+    _armed {},
 
-     _gyro_offsets({}),
-     _accel_offsets({}),
-     _mag_offsets({}),
+    _gyro_offsets({}),
+    _accel_offsets({}),
+    _mag_offsets({}),
 
-     _sensor_combined {},
+    _sensor_combined {},
 
-     _pos_ref {},
-     _baro_ref(0.0f),
-     _baro_ref_offset(0.0f),
-     _baro_gps_offset(0.0f),
+    _pos_ref{},
+    _filter_ref_offset(0.0f),
+    _baro_gps_offset(0.0f),
 
-     /* performance counters */
-     _loop_perf(perf_alloc(PC_ELAPSED, "ekf_att_pos_estimator")),
-     _loop_intvl(perf_alloc(PC_INTERVAL, "ekf_att_pos_est_interval")),
-     _perf_gyro(perf_alloc(PC_INTERVAL, "ekf_att_pos_gyro_upd")),
-     _perf_mag(perf_alloc(PC_INTERVAL, "ekf_att_pos_mag_upd")),
-     _perf_gps(perf_alloc(PC_INTERVAL, "ekf_att_pos_gps_upd")),
-     _perf_baro(perf_alloc(PC_INTERVAL, "ekf_att_pos_baro_upd")),
-     _perf_airspeed(perf_alloc(PC_INTERVAL, "ekf_att_pos_aspd_upd")),
-     _perf_reset(perf_alloc(PC_COUNT, "ekf_att_pos_reset")),
+    /* performance counters */
+    _loop_perf(perf_alloc(PC_ELAPSED, "ekf_att_pos_estimator")),
+    _loop_intvl(perf_alloc(PC_INTERVAL, "ekf_att_pos_est_interval")),
+    _perf_gyro(perf_alloc(PC_INTERVAL, "ekf_att_pos_gyro_upd")),
+    _perf_mag(perf_alloc(PC_INTERVAL, "ekf_att_pos_mag_upd")),
+    _perf_gps(perf_alloc(PC_INTERVAL, "ekf_att_pos_gps_upd")),
+    _perf_baro(perf_alloc(PC_INTERVAL, "ekf_att_pos_baro_upd")),
+    _perf_airspeed(perf_alloc(PC_INTERVAL, "ekf_att_pos_aspd_upd")),
+    _perf_reset(perf_alloc(PC_COUNT, "ekf_att_pos_reset")),
 
-     /* states */
-     _gps_alt_filt(0.0f),
-     _baro_alt_filt(0.0f),
-     _covariancePredictionDt(0.0f),
-     _gpsIsGood(false),
-     _previousGPSTimestamp(0),
-     _baro_init(false),
-     _gps_initialized(false),
-     _filter_start_time(0),
-     _last_sensor_timestamp(0),
-     _last_run(0),
-     _distance_last_valid(0),
-     _gyro_valid(false),
-     _accel_valid(false),
-     _mag_valid(false),
-     _gyro_main(0),
-     _accel_main(0),
-     _mag_main(0),
-     _ekf_logging(true),
-     _debug(0),
+    /* states */
+    _gps_alt_filt(0.0f),
+    _baro_alt_filt(0.0f),
+    _covariancePredictionDt(0.0f),
+    _gpsIsGood(false),
+    _previousGPSTimestamp(0),
+    _baro_init(false),
+    _gps_initialized(false),
+    _filter_start_time(0),
+    _last_sensor_timestamp(0),
+    _last_run(0),
+    _distance_last_valid(0),
+    _gyro_valid(false),
+    _accel_valid(false),
+    _mag_valid(false),
+    _gyro_main(0),
+    _accel_main(0),
+    _mag_main(0),
+    _ekf_logging(true),
+    _debug(0),
 
-     _newDataGps(false),
-     _newHgtData(false),
-     _newAdsData(false),
-     _newDataMag(false),
-     _newRangeData(false),
+    _newHgtData(false),
+    _newAdsData(false),
+    _newDataMag(false),
+    _newRangeData(false),
 
-     _mavlink_fd(-1),
-     _parameters {},
-     _parameter_handles {},
-     _ekf(nullptr)
+    _mavlink_fd(-1),
+    _parameters {},
+    _parameter_handles {},
+    _ekf(nullptr)
 {
 	_last_run = hrt_absolute_time();
 
@@ -219,6 +222,10 @@ AttitudePositionEstimatorEKF::AttitudePositionEstimatorEKF() :
 	_parameter_handles.magb_pnoise = param_find("PE_MAGB_PNOISE");
 	_parameter_handles.eas_noise = param_find("PE_EAS_NOISE");
 	_parameter_handles.pos_stddev_threshold = param_find("PE_POSDEV_INIT");
+
+	/* indicate consumers that the current position data is not valid */
+	_gps.eph = 10000.0f;
+	_gps.epv = 10000.0f;
 
 	/* fetch initial parameter values */
 	parameters_update();
@@ -396,7 +403,7 @@ int AttitudePositionEstimatorEKF::check_filter_state()
 		}
 	}
 
-	struct estimator_status_report rep;
+	struct estimator_status_s rep;
 
 	memset(&rep, 0, sizeof(rep));
 
@@ -405,6 +412,15 @@ int AttitudePositionEstimatorEKF::check_filter_state()
 
 		// Count the reset condition
 		perf_count(_perf_reset);
+		// GPS is in scaled integers, convert
+		double lat = _gps.lat / 1.0e7;
+		double lon = _gps.lon / 1.0e7;
+		float gps_alt = _gps.alt / 1e3f;
+
+		// Set up height correctly
+		orb_copy(ORB_ID(sensor_baro), _baro_sub, &_baro);
+
+		initReferencePosition(_gps.timestamp_position, lat, lon, gps_alt, _baro.altitude);
 
 	} else if (_ekf_logging) {
 		_ekf->GetFilterState(&ekf_report);
@@ -586,6 +602,7 @@ void AttitudePositionEstimatorEKF::task_main()
 
 				_baro_init = false;
 				_gps_initialized = false;
+
 				_last_sensor_timestamp = hrt_absolute_time();
 				_last_run = _last_sensor_timestamp;
 
@@ -622,7 +639,10 @@ void AttitudePositionEstimatorEKF::task_main()
 				// gps sample rate is 5Hz and altitude is assumed accurate when averaged over 30 seconds
 				// maintain heavily filtered values for both baro and gps altitude
 				// Assume the filtered output should be identical for both sensors
-				_baro_gps_offset = _baro_alt_filt - _gps_alt_filt;
+
+				if (_gpsIsGood) {
+					_baro_gps_offset = _baro_alt_filt - _gps_alt_filt;
+				}
 //				if (hrt_elapsed_time(&_last_debug_print) >= 5e6) {
 //					_last_debug_print = hrt_absolute_time();
 //					perf_print_counter(_perf_baro);
@@ -636,24 +656,29 @@ void AttitudePositionEstimatorEKF::task_main()
 //				}
 
 				/* Initialize the filter first */
-				if (!_gps_initialized && _gpsIsGood) {
-					initializeGPS();
-
-				} else if (!_ekf->statesInitialised) {
+				if (!_ekf->statesInitialised) {
 					// North, East Down position (m)
 					float initVelNED[3] = {0.0f, 0.0f, 0.0f};
 
 					_ekf->posNE[0] = 0.0f;
 					_ekf->posNE[1] = 0.0f;
 
-					_local_pos.ref_alt = _baro_ref;
-					_baro_ref_offset = 0.0f;
+					_local_pos.ref_alt = 0.0f;
 					_baro_gps_offset = 0.0f;
 					_baro_alt_filt = _baro.altitude;
 
 					_ekf->InitialiseFilter(initVelNED, 0.0, 0.0, 0.0f, 0.0f);
 
-				} else if (_ekf->statesInitialised) {
+					_filter_ref_offset = -_baro.altitude;
+
+					warnx("filter ref off: baro_alt: %8.4f", (double)_filter_ref_offset);
+
+				} else {
+
+					if (!_gps_initialized && _gpsIsGood) {
+						initializeGPS();
+						continue;
+					}
 
 					// Check if on ground - status is used by covariance prediction
 					_ekf->setOnGround(_landDetector.landed);
@@ -667,21 +692,20 @@ void AttitudePositionEstimatorEKF::task_main()
 						continue;
 					}
 
-					//Run EKF data fusion steps
-					updateSensorFusion(_newDataGps, _newDataMag, _newRangeData, _newHgtData, _newAdsData);
+					// Run EKF data fusion steps
+					updateSensorFusion(_gpsIsGood, _newDataMag, _newRangeData, _newHgtData, _newAdsData);
 
-					//Publish attitude estimations
+					// Publish attitude estimations
 					publishAttitude();
 
-					//Publish Local Position estimations
+					// Publish Local Position estimations
 					publishLocalPosition();
 
-					//Publish Global Position, but only if it's any good
-					if (_gps_initialized && (_gpsIsGood || _global_pos.dead_reckoning)) {
-						publishGlobalPosition();
-					}
+					// Publish Global Position, it will have a large uncertainty
+					// set if only altitude is known
+					publishGlobalPosition();
 
-					//Publish wind estimates
+					// Publish wind estimates
 					if (hrt_elapsed_time(&_wind.timestamp) > 99000) {
 						publishWindEstimate();
 					}
@@ -701,6 +725,32 @@ void AttitudePositionEstimatorEKF::task_main()
 	_exit(0);
 }
 
+void AttitudePositionEstimatorEKF::initReferencePosition(hrt_abstime timestamp,
+	double lat, double lon, float gps_alt, float baro_alt)
+{
+	// Reference altitude
+	if (isfinite(_ekf->states[9])) {
+		_filter_ref_offset = _ekf->states[9];
+	} else if (isfinite(-_ekf->hgtMea)) {
+		_filter_ref_offset = -_ekf->hgtMea;
+	} else {
+		_filter_ref_offset = -_baro.altitude;
+	}
+
+	// init filtered gps and baro altitudes
+	_gps_alt_filt = gps_alt;
+	_baro_alt_filt = baro_alt;
+
+	// Initialize projection
+	_local_pos.ref_lat = lat;
+	_local_pos.ref_lon = lon;
+	_local_pos.ref_alt = gps_alt;
+	_local_pos.ref_timestamp = timestamp;
+
+	map_projection_init(&_pos_ref, lat, lon);
+	mavlink_log_info(_mavlink_fd, "[ekf] ref: LA %.4f,LO %.4f,ALT %.2f", lat, lon, (double)gps_alt);
+}
+
 void AttitudePositionEstimatorEKF::initializeGPS()
 {
 	// GPS is in scaled integers, convert
@@ -710,14 +760,9 @@ void AttitudePositionEstimatorEKF::initializeGPS()
 
 	// Set up height correctly
 	orb_copy(ORB_ID(sensor_baro), _baro_sub, &_baro);
-	_baro_ref_offset = _ekf->states[9]; // this should become zero in the local frame
-
-	// init filtered gps and baro altitudes
-	_gps_alt_filt = gps_alt;
-	_baro_alt_filt = _baro.altitude;
 
 	_ekf->baroHgt = _baro.altitude;
-	_ekf->hgtMea = 1.0f * (_ekf->baroHgt - (_baro_ref));
+	_ekf->hgtMea = _ekf->baroHgt;
 
 	// Set up position variables correctly
 	_ekf->GPSstatus = _gps.fix_type;
@@ -736,20 +781,13 @@ void AttitudePositionEstimatorEKF::initializeGPS()
 
 	_ekf->InitialiseFilter(initVelNED, math::radians(lat), math::radians(lon) - M_PI, gps_alt, declination);
 
-	// Initialize projection
-	_local_pos.ref_lat = lat;
-	_local_pos.ref_lon = lon;
-	_local_pos.ref_alt = gps_alt;
-	_local_pos.ref_timestamp = _gps.timestamp_position;
-
-	map_projection_init(&_pos_ref, lat, lon);
-	mavlink_log_info(_mavlink_fd, "[ekf] ref: LA %.4f,LO %.4f,ALT %.2f", lat, lon, (double)gps_alt);
+	initReferencePosition(_gps.timestamp_position, lat, lon, gps_alt, _baro.altitude);
 
 #if 0
 	warnx("HOME/REF: LA %8.4f,LO %8.4f,ALT %8.2f V: %8.4f %8.4f %8.4f", lat, lon, (double)gps_alt,
 	      (double)_ekf->velNED[0], (double)_ekf->velNED[1], (double)_ekf->velNED[2]);
 	warnx("BARO: %8.4f m / ref: %8.4f m / gps offs: %8.4f m", (double)_ekf->baroHgt, (double)_baro_ref,
-	      (double)_baro_ref_offset);
+	      (double)_filter_ref_offset);
 	warnx("GPS: eph: %8.4f, epv: %8.4f, declination: %8.4f", (double)_gps.eph, (double)_gps.epv,
 	      (double)math::degrees(declination));
 #endif
@@ -783,14 +821,14 @@ void AttitudePositionEstimatorEKF::publishAttitude()
 	_att.pitch = euler(1);
 	_att.yaw = euler(2);
 
-	_att.rollspeed = _ekf->angRate.x - _ekf->states[10] / _ekf->dtIMU;
-	_att.pitchspeed = _ekf->angRate.y - _ekf->states[11] / _ekf->dtIMU;
-	_att.yawspeed = _ekf->angRate.z - _ekf->states[12] / _ekf->dtIMU;
+	_att.rollspeed = _ekf->angRate.x - _ekf->states[10] / _ekf->dtIMUfilt;
+	_att.pitchspeed = _ekf->angRate.y - _ekf->states[11] / _ekf->dtIMUfilt;
+	_att.yawspeed = _ekf->angRate.z - _ekf->states[12] / _ekf->dtIMUfilt;
 
 	// gyro offsets
-	_att.rate_offsets[0] = _ekf->states[10] / _ekf->dtIMU;
-	_att.rate_offsets[1] = _ekf->states[11] / _ekf->dtIMU;
-	_att.rate_offsets[2] = _ekf->states[12] / _ekf->dtIMU;
+	_att.rate_offsets[0] = _ekf->states[10] / _ekf->dtIMUfilt;
+	_att.rate_offsets[1] = _ekf->states[11] / _ekf->dtIMUfilt;
+	_att.rate_offsets[2] = _ekf->states[12] / _ekf->dtIMUfilt;
 
 	/* lazily publish the attitude only once available */
 	if (_att_pub > 0) {
@@ -810,7 +848,8 @@ void AttitudePositionEstimatorEKF::publishLocalPosition()
 	_local_pos.y = _ekf->states[8];
 
 	// XXX need to announce change of Z reference somehow elegantly
-	_local_pos.z = _ekf->states[9] - _baro_ref_offset;
+	_local_pos.z = _ekf->states[9] - _filter_ref_offset;
+	//_local_pos.z_stable = _ekf->states[9];
 
 	_local_pos.vx = _ekf->states[4];
 	_local_pos.vy = _ekf->states[5];
@@ -824,6 +863,17 @@ void AttitudePositionEstimatorEKF::publishLocalPosition()
 
 	_local_pos.z_global = false;
 	_local_pos.yaw = _att.yaw;
+
+	if (!isfinite(_local_pos.x) ||
+		!isfinite(_local_pos.y) ||
+		!isfinite(_local_pos.z) ||
+		!isfinite(_local_pos.vx) ||
+		!isfinite(_local_pos.vy) ||
+		!isfinite(_local_pos.vz))
+	{
+		// bad data, abort publication
+		return;
+	}
 
 	/* lazily publish the local position only once available */
 	if (_local_pos_pub > 0) {
@@ -846,6 +896,10 @@ void AttitudePositionEstimatorEKF::publishGlobalPosition()
 		_global_pos.lat = est_lat;
 		_global_pos.lon = est_lon;
 		_global_pos.time_utc_usec = _gps.time_utc_usec;
+	} else {
+		_global_pos.lat = 0.0;
+		_global_pos.lon = 0.0;
+		_global_pos.time_utc_usec = 0;
 	}
 
 	if (_local_pos.v_xy_valid) {
@@ -858,10 +912,12 @@ void AttitudePositionEstimatorEKF::publishGlobalPosition()
 	}
 
 	/* local pos alt is negative, change sign and add alt offsets */
-	_global_pos.alt = _baro_ref + (-_local_pos.z) - _baro_gps_offset;
+	_global_pos.alt = (-_local_pos.z) - _filter_ref_offset -  _baro_gps_offset;
 
 	if (_local_pos.v_z_valid) {
 		_global_pos.vel_d = _local_pos.vz;
+	} else {
+		_global_pos.vel_d = 0.0f;
 	}
 
 	/* terrain altitude */
@@ -870,8 +926,27 @@ void AttitudePositionEstimatorEKF::publishGlobalPosition()
 					(hrt_elapsed_time(&_distance_last_valid) < 20 * 1000 * 1000);
 
 	_global_pos.yaw = _local_pos.yaw;
-	_global_pos.eph = _gps.eph;
-	_global_pos.epv = _gps.epv;
+
+	const float dtLastGoodGPS = static_cast<float>(hrt_absolute_time() - _previousGPSTimestamp) / 1e6f;
+
+	if (_gps.timestamp_position == 0 || (dtLastGoodGPS >= POS_RESET_THRESHOLD)) {
+		_global_pos.eph = EPH_LARGE_VALUE;
+		_global_pos.epv = EPV_LARGE_VALUE;
+	} else {
+		_global_pos.eph = _gps.eph;
+		_global_pos.epv = _gps.epv;
+	}
+
+	if (!isfinite(_global_pos.lat) ||
+		!isfinite(_global_pos.lon) ||
+		!isfinite(_global_pos.alt) ||
+		!isfinite(_global_pos.vel_n) ||
+		!isfinite(_global_pos.vel_e) ||
+		!isfinite(_global_pos.vel_d))
+	{
+		// bad data, abort publication
+		return;
+	}
 
 	/* lazily publish the global position only once available */
 	if (_global_pos_pub > 0) {
@@ -908,8 +983,7 @@ void AttitudePositionEstimatorEKF::publishWindEstimate()
 }
 
 void AttitudePositionEstimatorEKF::updateSensorFusion(const bool fuseGPS, const bool fuseMag,
-		const bool fuseRangeSensor,
-		const bool fuseBaro, const bool fuseAirSpeed)
+		const bool fuseRangeSensor, const bool fuseBaro, const bool fuseAirSpeed)
 {
 	// Run the strapdown INS equations every IMU update
 	_ekf->UpdateStrapdownEquationsNED();
@@ -937,7 +1011,7 @@ void AttitudePositionEstimatorEKF::updateSensorFusion(const bool fuseGPS, const 
 		// Convert GPS measurements to Pos NE, hgt and Vel NED
 
 		// set fusion flags
-		_ekf->fuseVelData = true;
+		_ekf->fuseVelData = _gps.vel_ned_valid;
 		_ekf->fusePosData = true;
 
 		// recall states stored at time of measurement after adjusting for delays
@@ -978,7 +1052,7 @@ void AttitudePositionEstimatorEKF::updateSensorFusion(const bool fuseGPS, const 
 
 	if (fuseBaro) {
 		// Could use a blend of GPS and baro alt data if desired
-		_ekf->hgtMea = 1.0f * (_ekf->baroHgt - _baro_ref);
+		_ekf->hgtMea = _ekf->baroHgt;
 		_ekf->fuseHgtData = true;
 
 		// recall states stored at time of measurement after adjusting for delays
@@ -1007,7 +1081,7 @@ void AttitudePositionEstimatorEKF::updateSensorFusion(const bool fuseGPS, const 
 	}
 
 	// Fuse Airspeed Measurements
-	if (fuseAirSpeed && _ekf->VtasMeas > 7.0f) {
+	if (fuseAirSpeed && _airspeed.true_airspeed_m_s > 5.0f) {
 		_ekf->fuseVtasData = true;
 		_ekf->RecallStates(_ekf->statesAtVtasMeasTime,
 				   (IMUmsec - _parameters.tas_delay_ms)); // assume 100 msec avg delay for airspeed data
@@ -1069,9 +1143,10 @@ void AttitudePositionEstimatorEKF::print_status()
 	// 16-18: Earth Magnetic Field Vector - gauss (North, East, Down)
 	// 19-21: Body Magnetic Field Vector - gauss (X,Y,Z)
 
-	printf("dtIMU: %8.6f IMUmsec: %d\n", (double)_ekf->dtIMU, (int)IMUmsec);
-	printf("baro alt: %8.4f GPS alt: %8.4f\n", (double)_baro.altitude, (double)(_gps.alt / 1e3f));
-	printf("ref alt: %8.4f baro ref offset: %8.4f baro GPS offset: %8.4f\n", (double)_baro_ref, (double)_baro_ref_offset,
+	printf("dtIMU: %8.6f filt: %8.6f IMUmsec: %d\n", (double)_ekf->dtIMU, (double)_ekf->dtIMUfilt, (int)IMUmsec);
+	printf("alt RAW: baro alt: %8.4f GPS alt: %8.4f\n", (double)_baro.altitude, (double)_ekf->gpsHgt);
+	printf("alt EST: local alt: %8.4f (NED), AMSL alt: %8.4f (ENU)\n", (double)(_local_pos.z), (double)_global_pos.alt);
+	printf("filter ref offset: %8.4f baro GPS offset: %8.4f\n", (double)_filter_ref_offset,
 	       (double)_baro_gps_offset);
 	printf("dvel: %8.6f %8.6f %8.6f accel: %8.6f %8.6f %8.6f\n", (double)_ekf->dVelIMU.x, (double)_ekf->dVelIMU.y,
 	       (double)_ekf->dVelIMU.z, (double)_ekf->accel.x, (double)_ekf->accel.y, (double)_ekf->accel.z);
@@ -1170,7 +1245,7 @@ void AttitudePositionEstimatorEKF::pollData()
 	if (isfinite(_sensor_combined.gyro_rad_s[0]) &&
 	    isfinite(_sensor_combined.gyro_rad_s[1]) &&
 	    isfinite(_sensor_combined.gyro_rad_s[2]) &&
-	    (_sensor_combined.gyro_errcount <= _sensor_combined.gyro1_errcount)) {
+	    (_sensor_combined.gyro_errcount <= (_sensor_combined.gyro1_errcount + GYRO_SWITCH_HYSTERESIS))) {
 
 		_ekf->angRate.x = _sensor_combined.gyro_rad_s[0];
 		_ekf->angRate.y = _sensor_combined.gyro_rad_s[1];
@@ -1209,7 +1284,7 @@ void AttitudePositionEstimatorEKF::pollData()
 		int last_accel_main = _accel_main;
 
 		/* fail over to the 2nd accel if we know the first is down */
-		if (_sensor_combined.accelerometer_errcount <= _sensor_combined.accelerometer1_errcount) {
+		if (_sensor_combined.accelerometer_errcount <= (_sensor_combined.accelerometer1_errcount + ACCEL_SWITCH_HYSTERESIS)) {
 			_ekf->accel.x = _sensor_combined.accelerometer_m_s2[0];
 			_ekf->accel.y = _sensor_combined.accelerometer_m_s2[1];
 			_ekf->accel.z = _sensor_combined.accelerometer_m_s2[2];
@@ -1264,14 +1339,14 @@ void AttitudePositionEstimatorEKF::pollData()
 		orb_copy(ORB_ID(airspeed), _airspeed_sub, &_airspeed);
 		perf_count(_perf_airspeed);
 
-		_ekf->VtasMeas = _airspeed.true_airspeed_m_s;
+		_ekf->VtasMeas = _airspeed.true_airspeed_unfiltered_m_s;
 	}
 
 
-	orb_check(_gps_sub, &_newDataGps);
+	bool gps_update;
+	orb_check(_gps_sub, &gps_update);
 
-	if (_newDataGps) {
-
+	if (gps_update) {
 		orb_copy(ORB_ID(vehicle_gps_position), _gps_sub, &_gps);
 		perf_count(_perf_gps);
 
@@ -1317,17 +1392,18 @@ void AttitudePositionEstimatorEKF::pollData()
 				_ekf->updateDtGpsFilt(math::constrain(dtLastGoodGPS, 0.01f, POS_RESET_THRESHOLD));
 
 				// update LPF
-				_gps_alt_filt += (dtLastGoodGPS / (rc + dtLastGoodGPS)) * (_ekf->gpsHgt - _gps_alt_filt);
+				float filter_step = (dtLastGoodGPS / (rc + dtLastGoodGPS)) * (_ekf->gpsHgt - _gps_alt_filt);
+
+				if (isfinite(filter_step)) {
+					_gps_alt_filt += filter_step;
+				}
 			}
 
 			//check if we had a GPS outage for a long time
 			if (_gps_initialized) {
 
 				//Convert from global frame to local frame
-				float posNED[3] = {0.0f, 0.0f, 0.0f};
-				_ekf->calcposNED(posNED, _ekf->gpsLat, _ekf->gpsLon, _ekf->gpsHgt, _ekf->latRef, _ekf->lonRef, _ekf->hgtRef);
-				_ekf->posNE[0] = posNED[0];
-				_ekf->posNE[1] = posNED[1];
+				map_projection_project(&_pos_ref, (_gps.lat / 1.0e7), (_gps.lon / 1.0e7), &_ekf->posNE[0], &_ekf->posNE[1]);
 
 				if (dtLastGoodGPS > POS_RESET_THRESHOLD) {
 					_ekf->ResetPosition();
@@ -1353,15 +1429,12 @@ void AttitudePositionEstimatorEKF::pollData()
 
 			_previousGPSTimestamp = _gps.timestamp_position;
 
-		} else {
-			//Too poor GPS fix to use
-			_newDataGps = false;
 		}
 	}
 
 	// If it has gone more than POS_RESET_THRESHOLD amount of seconds since we received a GPS update,
 	// then something is very wrong with the GPS (possibly a hardware failure or comlink error)
-	const float dtLastGoodGPS = static_cast<float>(_gps.timestamp_position - _previousGPSTimestamp) / 1e6f;
+	const float dtLastGoodGPS = static_cast<float>(hrt_absolute_time() - _previousGPSTimestamp) / 1e6f;
 
 	if (dtLastGoodGPS >= POS_RESET_THRESHOLD) {
 
@@ -1406,21 +1479,21 @@ void AttitudePositionEstimatorEKF::pollData()
 		}
 
 		baro_last = _baro.timestamp;
+		if (!_baro_init) {
+			_baro_init = true;
+			_baro_alt_filt = _baro.altitude;
+		}
 
 		_ekf->updateDtHgtFilt(math::constrain(baro_elapsed, 0.001f, 0.1f));
 
 		_ekf->baroHgt = _baro.altitude;
-		_baro_alt_filt += (baro_elapsed / (rc + baro_elapsed)) * (_baro.altitude - _baro_alt_filt);
+		float filter_step = (baro_elapsed / (rc + baro_elapsed)) * (_baro.altitude - _baro_alt_filt);
 
-		if (!_baro_init) {
-			_baro_ref = _baro.altitude;
-			_baro_init = true;
-			warnx("ALT REF INIT");
+		if (isfinite(filter_step)) {
+			_baro_alt_filt += filter_step;
 		}
 
 		perf_count(_perf_baro);
-
-		_newHgtData = true;
 	}
 
 	//Update Magnetometer
@@ -1432,34 +1505,45 @@ void AttitudePositionEstimatorEKF::pollData()
 
 		int last_mag_main = _mag_main;
 
-		// XXX we compensate the offsets upfront - should be close to zero.
+		Vector3f mag0(_sensor_combined.magnetometer_ga[0], _sensor_combined.magnetometer_ga[1],
+			_sensor_combined.magnetometer_ga[2]);
+
+		Vector3f mag1(_sensor_combined.magnetometer1_ga[0], _sensor_combined.magnetometer1_ga[1],
+			_sensor_combined.magnetometer1_ga[2]);
+
+		const unsigned mag_timeout_us = 200000;
 
 		/* fail over to the 2nd mag if we know the first is down */
-		if (_sensor_combined.magnetometer_errcount <= _sensor_combined.magnetometer1_errcount) {
-			_ekf->magData.x = _sensor_combined.magnetometer_ga[0];
+		if (hrt_elapsed_time(&_sensor_combined.magnetometer_timestamp) < mag_timeout_us &&
+			_sensor_combined.magnetometer_errcount <= (_sensor_combined.magnetometer1_errcount + MAG_SWITCH_HYSTERESIS) &&
+			mag0.length() > 0.1f) {
+			_ekf->magData.x = mag0.x;
 			_ekf->magBias.x = 0.000001f; // _mag_offsets.x_offset
 
-			_ekf->magData.y = _sensor_combined.magnetometer_ga[1];
+			_ekf->magData.y = mag0.y;
 			_ekf->magBias.y = 0.000001f; // _mag_offsets.y_offset
 
-			_ekf->magData.z = _sensor_combined.magnetometer_ga[2];
+			_ekf->magData.z = mag0.z;
 			_ekf->magBias.z = 0.000001f; // _mag_offsets.y_offset
 			_mag_main = 0;
 
-		} else {
-			_ekf->magData.x = _sensor_combined.magnetometer1_ga[0];
+		} else if (hrt_elapsed_time(&_sensor_combined.magnetometer1_timestamp) < mag_timeout_us &&
+			mag1.length() > 0.1f) {
+			_ekf->magData.x = mag1.x;
 			_ekf->magBias.x = 0.000001f; // _mag_offsets.x_offset
 
-			_ekf->magData.y = _sensor_combined.magnetometer1_ga[1];
+			_ekf->magData.y = mag1.y;
 			_ekf->magBias.y = 0.000001f; // _mag_offsets.y_offset
 
-			_ekf->magData.z = _sensor_combined.magnetometer1_ga[2];
+			_ekf->magData.z = mag1.z;
 			_ekf->magBias.z = 0.000001f; // _mag_offsets.y_offset
 			_mag_main = 1;
+		} else {
+			_mag_valid = false;
 		}
 
 		if (last_mag_main != _mag_main) {
-			mavlink_and_console_log_emergency(_mavlink_fd, "MAG FAILED! Switched from #%d to %d", last_mag_main, _mag_main);
+			mavlink_and_console_log_emergency(_mavlink_fd, "MAG FAILED! Failover from unit %d to unit %d", last_mag_main, _mag_main);
 		}
 	}
 
@@ -1493,28 +1577,32 @@ int AttitudePositionEstimatorEKF::trip_nan()
 
 		float nan_val = 0.0f / 0.0f;
 
-		warnx("system not armed, tripping state vector with NaN values");
+		warnx("system not armed, tripping state vector with NaN");
 		_ekf->states[5] = nan_val;
 		usleep(100000);
 
-		warnx("tripping covariance #1 with NaN values");
+		warnx("tripping covariance #1 with NaN");
 		_ekf->KH[2][2] = nan_val; //  intermediate result used for covariance updates
 		usleep(100000);
 
-		warnx("tripping covariance #2 with NaN values");
+		warnx("tripping covariance #2 with NaN");
 		_ekf->KHP[5][5] = nan_val; // intermediate result used for covariance updates
 		usleep(100000);
 
-		warnx("tripping covariance #3 with NaN values");
+		warnx("tripping covariance #3 with NaN");
 		_ekf->P[3][3] = nan_val; // covariance matrix
 		usleep(100000);
 
-		warnx("tripping Kalman gains with NaN values");
+		warnx("tripping Kalman gains with NaN");
 		_ekf->Kfusion[0] = nan_val; // Kalman gains
 		usleep(100000);
 
-		warnx("tripping stored states[0] with NaN values");
+		warnx("tripping stored states[0] with NaN");
 		_ekf->storedStates[0][0] = nan_val;
+		usleep(100000);
+
+		warnx("tripping states[9] with NaN");
+		_ekf->states[9] = nan_val;
 		usleep(100000);
 
 		warnx("\nDONE - FILTER STATE:");
@@ -1526,7 +1614,7 @@ int AttitudePositionEstimatorEKF::trip_nan()
 
 int ekf_att_pos_estimator_main(int argc, char *argv[])
 {
-	if (argc < 1) {
+	if (argc < 2) {
 		errx(1, "usage: ekf_att_pos_estimator {start|stop|status|logging}");
 	}
 

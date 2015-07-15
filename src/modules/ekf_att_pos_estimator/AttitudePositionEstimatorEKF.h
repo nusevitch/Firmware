@@ -174,8 +174,7 @@ private:
 
     struct map_projection_reference_s   _pos_ref;
 
-    float                       _baro_ref;      /**< barometer reference altitude */
-    float                       _baro_ref_offset;   /**< offset between initial baro reference and GPS init baro altitude */
+    float                       _filter_ref_offset;   /**< offset between initial baro reference and GPS init baro altitude */
     float                       _baro_gps_offset;   /**< offset between baro altitude (at GPS init time) and GPS altitude */
     hrt_abstime                 _last_debug_print = 0;
 
@@ -208,7 +207,6 @@ private:
     bool            _ekf_logging;       ///< log EKF state
     unsigned        _debug;             ///< debug level - default 0
 
-    bool            _newDataGps;
     bool            _newHgtData;
     bool            _newAdsData;
     bool            _newDataMag;
@@ -333,6 +331,12 @@ private:
     *   Should only be required to call once
     **/
     void initializeGPS();
+
+    /**
+     * Initialize the reference position for the local coordinate frame
+     */
+    void initReferencePosition(hrt_abstime timestamp,
+            double lat, double lon, float gps_alt, float baro_alt);
 
     /**
     * @brief

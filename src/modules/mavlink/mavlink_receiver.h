@@ -64,7 +64,6 @@
 #include <uORB/topics/vehicle_rates_setpoint.h>
 #include <uORB/topics/optical_flow.h>
 #include <uORB/topics/actuator_outputs.h>
-#include <uORB/topics/actuator_controls_effective.h>
 #include <uORB/topics/actuator_controls.h>
 #include <uORB/topics/actuator_armed.h>
 #include <uORB/topics/manual_control_setpoint.h>
@@ -73,6 +72,7 @@
 #include <uORB/topics/airspeed.h>
 #include <uORB/topics/battery_status.h>
 #include <uORB/topics/vehicle_force_setpoint.h>
+#include <uORB/topics/time_offset.h>
 #include <uORB/topics/apnt_gps_status.h>
 #include <uORB/topics/apnt_site_status.h>
 #include <uORB/topics/tracking_status.h>
@@ -134,7 +134,9 @@ private:
 	void handle_message_set_attitude_target(mavlink_message_t *msg);
 	void handle_message_radio_status(mavlink_message_t *msg);
 	void handle_message_manual_control(mavlink_message_t *msg);
+	void handle_message_rc_channels_override(mavlink_message_t *msg);
 	void handle_message_heartbeat(mavlink_message_t *msg);
+	void handle_message_ping(mavlink_message_t *msg);
 	void handle_message_request_data_stream(mavlink_message_t *msg);
 	void handle_message_system_time(mavlink_message_t *msg);
 	void handle_message_timesync(mavlink_message_t *msg);
@@ -153,9 +155,10 @@ private:
 	void *receive_thread(void *arg);
 
 	/**
-	* Convert remote nsec timestamp to local hrt time (usec)
+	* Convert remote timestamp to local hrt time (usec)
+	* Use timesync if available, monotonic boot time otherwise
 	*/
-	uint64_t to_hrt(uint64_t nsec);
+	uint64_t sync_stamp(uint64_t usec);
 	/**
 	* Exponential moving average filter to smooth time offset
 	*/
@@ -192,6 +195,7 @@ private:
 	orb_advert_t _rc_pub;
 	orb_advert_t _manual_pub;
 	orb_advert_t _land_detector_pub;
+	orb_advert_t _time_offset_pub;
 	orb_advert_t _apnt_gps_status_pub;
 	orb_advert_t _apnt_site_status_pub;
 	orb_advert_t _tracking_status_pub;
@@ -207,11 +211,12 @@ private:
 	float _hil_local_alt0;
 	struct map_projection_reference_s _hil_local_proj_ref;
 	struct offboard_control_mode_s _offboard_control_mode;
+	struct vehicle_attitude_setpoint_s _att_sp;
 	struct vehicle_rates_setpoint_s _rates_sp;
 	double _time_offset_avg_alpha;
 	uint64_t _time_offset;
 
 	/* do not allow copying this class */
-	MavlinkReceiver(const MavlinkReceiver&);
-	MavlinkReceiver operator=(const MavlinkReceiver&);
+	MavlinkReceiver(const MavlinkReceiver &);
+	MavlinkReceiver operator=(const MavlinkReceiver &);
 };
