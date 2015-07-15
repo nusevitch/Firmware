@@ -2732,12 +2732,12 @@ public:
 
 	static const char *get_name_static()
 	{
-		return "BEARING";
+		return "BEARING_CC";
 	}
 
 	uint8_t get_id()
 	{
-		return MAVLINK_MSG_ID_BEARING;
+		return MAVLINK_MSG_ID_BEARING_CC;
 	}
 
 	static MavlinkStream *new_instance(Mavlink *mavlink)
@@ -2747,7 +2747,7 @@ public:
 
 	unsigned get_size()
 	{
-		return MAVLINK_MSG_ID_BEARING_LEN + MAVLINK_NUM_NON_PAYLOAD_BYTES;
+		return MAVLINK_MSG_ID_BEARING_CC_LEN + MAVLINK_NUM_NON_PAYLOAD_BYTES;
 	}
 
 private:
@@ -2770,13 +2770,13 @@ protected:
 
 		if (bearing_sub->update(&time, &bearing)) {
 
-			mavlink_bearing_t msg;
+			mavlink_bearing_cc_t msg;
 			msg.bearing = bearing.bearing;
 			msg.lat = bearing.lat;
 			msg.lon = bearing.lon;
 			msg.alt = bearing.alt;
 
-			_mavlink->send_message(MAVLINK_MSG_ID_BEARING, &msg);
+			_mavlink->send_message(MAVLINK_MSG_ID_BEARING_CC, &msg);
 		}
 	}
 };

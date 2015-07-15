@@ -246,8 +246,8 @@ MavlinkReceiver::handle_message(mavlink_message_t *msg)
 		handle_message_hunt_reached(msg);
 		break;
 
-	case MAVLINK_MSG_ID_BEARING:
-		handle_message_bearing(msg);
+	case MAVLINK_MSG_ID_BEARING_CC:
+		handle_message_bearing_cc(msg);
 		break;
 
 	case MAVLINK_MSG_ID_RSSI:
@@ -1789,9 +1789,9 @@ MavlinkReceiver::handle_message_hunt_reached(mavlink_message_t *msg) {
 }
 
 void
-MavlinkReceiver::handle_message_bearing(mavlink_message_t *msg) {
-	mavlink_bearing_t bear;
-	mavlink_msg_bearing_decode(msg, &bear);
+MavlinkReceiver::handle_message_bearing_cc(mavlink_message_t *msg) {
+	mavlink_bearing_cc_t bear;
+	mavlink_msg_bearing_cc_decode(msg, &bear);
 
 	struct hunt_bearing_s bearing;
 	memset(&bearing, 0, sizeof(bearing));

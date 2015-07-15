@@ -149,7 +149,7 @@ private:
 	void handle_message_tracking_cmd(mavlink_message_t *msg);
 	void handle_message_hunt_reached(mavlink_message_t *msg);
 	void handle_message_apnt_position(mavlink_message_t *msg);
-	void handle_message_bearing(mavlink_message_t *msg);
+	void handle_message_bearing_cc(mavlink_message_t *msg);
 	void handle_message_rssi(mavlink_message_t *msg);
 
 	void *receive_thread(void *arg);

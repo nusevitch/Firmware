@@ -1962,7 +1962,7 @@ int sdlog2_thread_main(int argc, char *argv[])
 			LOGBUFFER_WRITE_AND_COUNT(TRAC);
 		} */
 
-		if (copy_if_updated(ORB_ID(hunt_state), subs.hunt_sub, &buf.hunt_state)) {
+		if (copy_if_updated(ORB_ID(hunt_state), &subs.hunt_sub, &buf.hunt_state)) {
 			log_msg.msg_type = LOG_HUNT_MSG;
 			log_msg.body.log_HUNT.hunt_state = buf.hunt_state.hunt_mode_state;
 			LOGBUFFER_WRITE_AND_COUNT(HUNT);
@@ -1970,7 +1970,7 @@ int sdlog2_thread_main(int argc, char *argv[])
 
 		/* --- TRACKING CMD --- */
 
-		if (copy_if_updated(ORB_ID(tracking_cmd), subs.tcmd_sub, &buf.tracking_cmd) ) {
+		if (copy_if_updated(ORB_ID(tracking_cmd), &subs.tcmd_sub, &buf.tracking_cmd) ) {
 			log_msg.msg_type = LOG_TCMD_MSG;
 			log_msg.body.log_TCMD.cmd_id = buf.tracking_cmd.cmd_id;
 			log_msg.body.log_TCMD.cmd_type = buf.tracking_cmd.cmd_type;
