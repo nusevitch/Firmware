@@ -40,9 +40,6 @@ else
 			echo "[i] format failed"
 			tone_alarm MNBG
 			set LOG_FILE /dev/null
-	echo "[i] No microSD card found"
-	# Play SOS
-	tone_alarm error
 		fi
 	else
 		set LOG_FILE /dev/null
