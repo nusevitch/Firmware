@@ -120,7 +120,10 @@ Hunt::on_activation()
 		// update the reference position
 		update_reference_position();
 
+		// move to the starting location
+		move_to_start();
 
+		/*
 		// create a mission item for the current location
 		_mission_item.lat = _navigator->get_global_position()->lat;
 		_mission_item.lon = _navigator->get_global_position()->lon;
@@ -134,6 +137,7 @@ Hunt::on_activation()
 		// broadcast the status change
 		// TODO: make change the state a function, will better outline the state machine...
 		report_status();
+		*/
 
 	}
 }
