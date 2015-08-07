@@ -161,6 +161,7 @@ private:
 	control::BlockParamFloat _param_start_lat;
 	control::BlockParamFloat _param_start_lon;
 	control::BlockParamFloat _param_start_alt;
+	control::BlockParamFloat _param_start_hdg;
 
 	int _local_pos_sub; /**< subscription to the local position */
 

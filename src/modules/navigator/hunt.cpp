@@ -35,6 +35,7 @@ Hunt::Hunt(Navigator *navigator, const char *name) :
 	_param_start_lat(this, "HUNT_STRT_LAT", false),
 	_param_start_lon(this, "HUNT_STRT_LON", false),
 	_param_start_alt(this, "HUNT_STRT_ALT", false),
+	_param_start_hdg(this, "HUNT_STRT_HDG", false),
 
 
 /* subscriptions */
@@ -663,13 +664,14 @@ Hunt::move_to_start()
 	float start_lat = _param_start_lat.get();
 	float start_lon = _param_start_lon.get();
 	float start_alt = _param_start_alt.get();
+	float start_hdg = _param_start_hdg.get();
 
 	_mission_item.lat = (double) start_lat;
 	_mission_item.lon = (double) start_lon;
 	_mission_item.altitude = start_alt;
 	_mission_item.altitude_is_relative = false;
 
-	_mission_item.yaw = 0.0f;
+	_mission_item.yaw = math::radians(start_hdg);
 
 	// loiter radius and direction will be same, regardless of cmd type
 	_mission_item.loiter_radius = _navigator->get_loiter_radius();

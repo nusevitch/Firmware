@@ -60,7 +60,7 @@ f *   Copyright (c) 2013 PX4 Development Team. All rights reserved.
  * @min 0.0
  * @group Hunt Params
  */
-PARAM_DEFINE_FLOAT(HUNT_YAW_STEP, 10.0f);
+PARAM_DEFINE_FLOAT(HUNT_YAW_STEP, 120.0f);
 
 /**
  * Start Latitude.
@@ -94,4 +94,16 @@ PARAM_DEFINE_FLOAT(HUNT_STRT_LON, -122.176883f);
  * @group Hunt Params
  */
 PARAM_DEFINE_FLOAT(HUNT_STRT_ALT, 40.0f);
+
+/**
+ * Start Heading.
+ *
+ * The heading for the vehicle at the starting point.
+ *
+ * @unit degree
+ * @min 0.0
+ * @max 359.9
+ * @group Hunt Params
+ */
+PARAM_DEFINE_FLOAT(HUNT_STRT_HDG, 270.0f);
 
