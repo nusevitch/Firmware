@@ -1461,6 +1461,7 @@ Mavlink::task_main(int argc, char *argv[])
 		configure_stream("TRACKING_CMD", 0.5f);
 		configure_stream("HUNT_MISSION_REACHED", 0.5f);
 		configure_stream("BEARING_CC", 0.5f);
+		configure_stream("BEARING_MLE", 0.5f);
 		configure_stream("RSSI", 3.0f);
 		// configure_stream("APNT_POSITION", 1.0f);
 		break;
