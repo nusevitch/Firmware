@@ -130,6 +130,7 @@ MavlinkReceiver::MavlinkReceiver(Mavlink *parent) :
 	_temp_hunt_result_pub(-1), // TEMPORARY
 	_apnt_position_pub(-1),
 	_bearing_pub(-1),
+	_bearing_mle_pub(-1),
 	_rssi_pub(-1),
 	_control_mode_sub(orb_subscribe(ORB_ID(vehicle_control_mode))),
 	_hil_frames(0),
@@ -248,6 +249,10 @@ MavlinkReceiver::handle_message(mavlink_message_t *msg)
 
 	case MAVLINK_MSG_ID_BEARING_CC:
 		handle_message_bearing_cc(msg);
+		break;
+
+	case MAVLINK_MSG_ID_BEARING_MLE:
+		handle_message_bearing_mle(msg);
 		break;
 
 	case MAVLINK_MSG_ID_RSSI:
@@ -1807,6 +1812,28 @@ MavlinkReceiver::handle_message_bearing_cc(mavlink_message_t *msg) {
 		_bearing_pub = orb_advertise(ORB_ID(hunt_bearing), &bearing);
 	} else {
 		orb_publish(ORB_ID(hunt_bearing), _bearing_pub, &bearing);
+	}
+}
+
+void
+MavlinkReceiver::handle_message_bearing_mle(mavlink_message_t *msg) {
+	mavlink_bearing_mle_t bear;
+	mavlink_msg_bearing_mle_decode(msg, &bear);
+
+	struct hunt_bearing_s bearing;
+	memset(&bearing, 0, sizeof(bearing));
+
+	bearing.bearing = bear.bearing;
+	bearing.lat = bear.lat;
+	bearing.lon = bear.lon;
+	bearing.alt = bear.alt;
+	bearing.timestamp_us = hrt_absolute_time();
+
+
+	if (_bearing_mle_pub < 0) {
+		_bearing_mle_pub = orb_advertise(ORB_ID(hunt_bearing_mle), &bearing);
+	} else {
+		orb_publish(ORB_ID(hunt_bearing_mle), _bearing_mle_pub, &bearing);
 	}
 }
 

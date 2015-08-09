@@ -150,6 +150,7 @@ private:
 	void handle_message_hunt_reached(mavlink_message_t *msg);
 	void handle_message_apnt_position(mavlink_message_t *msg);
 	void handle_message_bearing_cc(mavlink_message_t *msg);
+	void handle_message_bearing_mle(mavlink_message_t *msg);
 	void handle_message_rssi(mavlink_message_t *msg);
 
 	void *receive_thread(void *arg);
@@ -203,6 +204,7 @@ private:
 	orb_advert_t _temp_hunt_result_pub;		// THIS IS TEMPORARY
 	orb_advert_t _apnt_position_pub;
 	orb_advert_t _bearing_pub;
+	orb_advert_t _bearing_mle_pub;
 	orb_advert_t _rssi_pub;
 	int _control_mode_sub;
 	int _hil_frames;

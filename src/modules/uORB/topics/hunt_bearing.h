@@ -32,6 +32,7 @@ struct hunt_bearing_s
 
 /* register this as object request broker structure */
 ORB_DECLARE(hunt_bearing);
+ORB_DECLARE(hunt_bearing_mle);
 
 
 #endif /* HUNT_BEARING_H_ */

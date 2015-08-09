@@ -2768,6 +2768,19 @@ protected:
 	{
 		struct hunt_bearing_s bearing;
 
+		// update the bearing info
+		bearing_sub->update(&time, &bearing);
+
+		// send it regardless of if updated
+		mavlink_bearing_cc_t msg;
+		msg.bearing = bearing.bearing;
+		msg.lat = bearing.lat;
+		msg.lon = bearing.lon;
+		msg.alt = bearing.alt;
+
+		_mavlink->send_message(MAVLINK_MSG_ID_BEARING_CC, &msg);
+
+		/*
 		if (bearing_sub->update(&time, &bearing)) {
 
 			mavlink_bearing_cc_t msg;
@@ -2778,6 +2791,78 @@ protected:
 
 			_mavlink->send_message(MAVLINK_MSG_ID_BEARING_CC, &msg);
 		}
+		*/
+	}
+};
+
+class MavlinkStreamBearingMLE : public MavlinkStream
+{
+public:
+	const char *get_name() const
+	{
+		return MavlinkStreamBearingMLE::get_name_static();
+	}
+
+	static const char *get_name_static()
+	{
+		return "BEARING_MLE";
+	}
+
+	uint8_t get_id()
+	{
+		return MAVLINK_MSG_ID_BEARING_MLE;
+	}
+
+	static MavlinkStream *new_instance(Mavlink *mavlink)
+	{
+		return new MavlinkStreamBearingMLE(mavlink);
+	}
+
+	unsigned get_size()
+	{
+		return MAVLINK_MSG_ID_BEARING_MLE_LEN + MAVLINK_NUM_NON_PAYLOAD_BYTES;
+	}
+
+private:
+	MavlinkOrbSubscription *bearing_sub;
+	uint64_t time;
+
+	/* do not allow top copying this class */
+	MavlinkStreamBearingMLE(MavlinkStreamBearingMLE &);
+	MavlinkStreamBearingMLE& operator = (const MavlinkStreamBearingMLE &);
+
+protected:
+	explicit MavlinkStreamBearingMLE(Mavlink *mavlink) : MavlinkStream(mavlink),
+		bearing_sub(_mavlink->add_orb_subscription(ORB_ID(hunt_bearing_mle))),
+		time(0)
+	{}
+
+	void send(const hrt_abstime t)
+	{
+		struct hunt_bearing_s bearing;
+
+		// update bearing info
+		bearing_sub->update(&time, &bearing);
+
+		// send the bearing mle message regardless
+		mavlink_bearing_mle_t msg;
+		msg.bearing = bearing.bearing;
+		msg.lat = bearing.lat;
+		msg.lon = bearing.lon;
+		msg.alt = bearing.alt;
+		_mavlink->send_message(MAVLINK_MSG_ID_BEARING_MLE, &msg);
+
+		/*
+		if (bearing_sub->update(&time, &bearing)) {
+
+			mavlink_bearing_cc_t msg;
+			msg.bearing = bearing.bearing;
+			msg.lat = bearing.lat;
+			msg.lon = bearing.lon;
+			msg.alt = bearing.alt;
+
+			_mavlink->send_message(MAVLINK_MSG_ID_BEARING_CC, &msg);
+		} */
 	}
 };
 
@@ -2885,6 +2970,7 @@ const StreamListItem *streams_list[] = {
 	new StreamListItem(&MavlinkStreamHuntReached::new_instance, &MavlinkStreamHuntReached::get_name_static),
 	new StreamListItem(&MavlinkStreamApntPosition::new_instance, &MavlinkStreamApntPosition::get_name_static),
 	new StreamListItem(&MavlinkStreamBearing::new_instance, &MavlinkStreamBearing::get_name_static),
+	new StreamListItem(&MavlinkStreamBearingMLE::new_instance, &MavlinkStreamBearingMLE::get_name_static),
 	new StreamListItem(&MavlinkStreamRssi::new_instance, &MavlinkStreamRssi::get_name_static),
 	nullptr
 };

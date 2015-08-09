@@ -274,6 +274,7 @@ ORB_DEFINE(temp_hunt_result, struct temp_hunt_result_s);
 
 #include "topics/hunt_bearing.h"
 ORB_DEFINE(hunt_bearing, struct hunt_bearing_s);
+ORB_DEFINE(hunt_bearing_mle, struct hunt_bearing_s);
 
 #include "topics/hunt_rssi.h"
 ORB_DEFINE(hunt_rssi, struct hunt_rssi_s);
