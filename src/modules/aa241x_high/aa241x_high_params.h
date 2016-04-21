@@ -74,6 +74,11 @@ struct aah_params {
     float integral_sideslip_gain;
     float proportional_throttle_gain;
     float integral_throttle_gain;
+    //Allow for manual control of some params
+    float man_throt;
+    float man_pitch;
+    float man_roll;
+    float man_rudder;
     // TODO: add custom parameter variable names here......
 
 };
@@ -105,6 +110,11 @@ struct aah_param_handles {
     param_t integral_sideslip_gain;
     param_t proportional_throttle_gain;
     param_t integral_throttle_gain;
+    //Parameters to enable mixed control
+    param_t man_throt;
+    param_t man_pitch;
+    param_t man_roll;
+    param_t man_rudder;
 };
 
 /**

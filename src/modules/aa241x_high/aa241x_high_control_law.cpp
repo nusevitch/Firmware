@@ -81,7 +81,7 @@ void flight_control() {
         altitude_desired = position_D_baro; 		// altitude_desired needs to be declared
         ground_course_desired = ground_course;    //Desired Course
         desired_sideslip_angle=0.0f;              //Desired Sideslip Angle
-        groundspeed_desired=ground_speed;
+        groundspeed_desired=ground_speed;         //Current Throttle Control based Only on ground speed
         //Can I declare variables here, or do I also need to put them in the header file?
         integral_course_error=0.0f;  //Initialize the Integral Terms to 0
         integral_altitude_error=0.0f; //Initialize Altitude Error
@@ -201,13 +201,40 @@ float Dt=hrt_absolute_time() - previous_loop_timestamp; //Compute the loop time,
 
     // How to make the gains tuneable? From QR Ground Control?
 
+
     // Set output of roll servo to the control law output calculated above
-    roll_servo_out = RollEffort;   //PD Roll Control
+    //roll_servo_out = RollEffort;   //PD Roll Control
     // as an example, just passing through manual control to everything but roll
     //pitch_servo_out = -man_pitch_in;  // WHy the negative sign?
-    pitch_servo_out = PitchEffort; // PD Control on Pitch
+    //pitch_servo_out = PitchEffort; // PD Control on Pitch
     //yaw_servo_out = man_yaw_in;
-    yaw_servo_out = YawEffort;
-    throttle_servo_out= 0.0f; //throttle_effort;  //throttle set to 0 for testing
-    //throttle_servo_out = man_throttle_in;
+
+    //Set Roll Outputs
+    if (aah_parameters.man_roll>0.5f){
+        roll_servo_out=man_roll_in; //Is direction correct?
+    } else {
+        roll_servo_out = RollEffort; //throttle_effort;
+    }
+
+    //Set Pitch Outputs
+    if (aah_parameters.man_pitch>0.5f){
+        pitch_servo_out = -man_pitch_in;  //Negative Sign comes from testing, is this the right place to put it?
+    } else {
+        pitch_servo_out = -PitchEffort; //throttle_effort;  //throttle set to 0 for testing
+    }
+
+    //Set Yaw Outputs
+    if (aah_parameters.man_rudder>0.5f){
+        yaw_servo_out = man_yaw_in;
+    } else {
+        yaw_servo_out = -YawEffort; //Yaw Effort, Negative sign comes from testing
+    }
+
+    //Set Throttle Outputs
+    if (aah_parameters.man_throt>0.5f){
+        throttle_servo_out = man_throttle_in;
+    } else {
+        throttle_servo_out= throttle_effort; //throttle_effort;
+    }
+
 }

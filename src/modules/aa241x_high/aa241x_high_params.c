@@ -82,7 +82,7 @@ PARAM_DEFINE_FLOAT(AAH_PROPROLLGAIN, 1.0f);
  * @unit none 						(the unit attribute (not required, just helps for sanity))
  * @group AA241x High Params		(always include this)
  */
-PARAM_DEFINE_FLOAT(AAH_DROLLG, 1.0f);
+PARAM_DEFINE_FLOAT(AAH_DROLLG, 0.0f);
 /**
  * This is an example parameter.  The name of the parameter in QGroundControl
  * will be AAH_PROPROLLGAIN and will be in the AAH dropdown.  Make sure to always
@@ -104,7 +104,7 @@ PARAM_DEFINE_FLOAT(AAH_PPITCHG, 1.0f);
  * @unit none 						(the unit attribute (not required, just helps for sanity))
  * @group AA241x High Params		(always include this)
  */
-PARAM_DEFINE_FLOAT(AAH_DPITCHG, 1.0f);
+PARAM_DEFINE_FLOAT(AAH_DPITCHG, 0.0f);
 /**
  * This is an example parameter.  The name of the parameter in QGroundControl
  * will be AAH_PROPROLLGAIN and will be in the AAH dropdown.  Make sure to always
@@ -115,7 +115,7 @@ PARAM_DEFINE_FLOAT(AAH_DPITCHG, 1.0f);
  * @unit none 						(the unit attribute (not required, just helps for sanity))
  * @group AA241x High Params		(always include this)
  */
-PARAM_DEFINE_FLOAT(AAH_PCOURSEG, 1.0f);
+PARAM_DEFINE_FLOAT(AAH_PCOURSEG, 0.0f);
 /**
  * This is an example parameter.  The name of the parameter in QGroundControl
  * will be AAH_PROPROLLGAIN and will be in the AAH dropdown.  Make sure to always
@@ -126,7 +126,7 @@ PARAM_DEFINE_FLOAT(AAH_PCOURSEG, 1.0f);
  * @unit none 						(the unit attribute (not required, just helps for sanity))
  * @group AA241x High Params		(always include this)
  */
-PARAM_DEFINE_FLOAT(AAH_ICOURSEG, 1.0f);
+PARAM_DEFINE_FLOAT(AAH_ICOURSEG, 0.0f);
 /**
  * This is an example parameter.  The name of the parameter in QGroundControl
  * will be AAH_PROPROLLGAIN and will be in the AAH dropdown.  Make sure to always
@@ -137,7 +137,7 @@ PARAM_DEFINE_FLOAT(AAH_ICOURSEG, 1.0f);
  * @unit none 						(the unit attribute (not required, just helps for sanity))
  * @group AA241x High Params		(always include this)
  */
-PARAM_DEFINE_FLOAT(AAH_PALTITUDEG, 1.0f);
+PARAM_DEFINE_FLOAT(AAH_PALTITUDEG, 0.0f);
 /**
  * This is an example parameter.  The name of the parameter in QGroundControl
  * will be AAH_PROPROLLGAIN and will be in the AAH dropdown.  Make sure to always
@@ -148,7 +148,7 @@ PARAM_DEFINE_FLOAT(AAH_PALTITUDEG, 1.0f);
  * @unit none 						(the unit attribute (not required, just helps for sanity))
  * @group AA241x High Params		(always include this)
  */
-PARAM_DEFINE_FLOAT(AAH_IALTITUDEG, 1.0f);
+PARAM_DEFINE_FLOAT(AAH_IALTITUDEG, 0.0f);
 /**
  * This is an example parameter.  The name of the parameter in QGroundControl
  * will be AAH_PROPROLLGAIN and will be in the AAH dropdown.  Make sure to always
@@ -170,7 +170,7 @@ PARAM_DEFINE_FLOAT(AAH_PSIDESLIPG, 1.0f);
  * @unit none 						(the unit attribute (not required, just helps for sanity))
  * @group AA241x High Params		(always include this)
  */
-PARAM_DEFINE_FLOAT(AAH_ISIDESLIPG, 1.0f);
+PARAM_DEFINE_FLOAT(AAH_ISIDESLIPG, 0.0f);
 /**
  * This is an example parameter.  The name of the parameter in QGroundControl
  * will be AAH_PROPROLLGAIN and will be in the AAH dropdown.  Make sure to always
@@ -181,7 +181,7 @@ PARAM_DEFINE_FLOAT(AAH_ISIDESLIPG, 1.0f);
  * @unit none 						(the unit attribute (not required, just helps for sanity))
  * @group AA241x High Params		(always include this)
  */
-PARAM_DEFINE_FLOAT(AAH_PTHROTTLEG, 1.0f);
+PARAM_DEFINE_FLOAT(AAH_PTHROTTLEG, 0.0f);
 /**
  * This is an example parameter.  The name of the parameter in QGroundControl
  * will be AAH_PROPROLLGAIN and will be in the AAH dropdown.  Make sure to always
@@ -192,7 +192,32 @@ PARAM_DEFINE_FLOAT(AAH_PTHROTTLEG, 1.0f);
  * @unit none 						(the unit attribute (not required, just helps for sanity))
  * @group AA241x High Params		(always include this)
  */
-PARAM_DEFINE_FLOAT(AAH_ITHROTTLEG, 1.0f);
+PARAM_DEFINE_FLOAT(AAH_ITHROTTLEG, 0.0f);
+
+// These parameters enable partial manual control
+//If set to 0, autonomous control, if >.5, manual
+/**
+ * @unit none 						(the unit attribute (not required, just helps for sanity))
+ * @group AA241x High Params		(always include this)
+ */
+PARAM_DEFINE_FLOAT(AAH_MANTHROT, 0.0f);
+
+/**
+ * @unit none 						(the unit attribute (not required, just helps for sanity))
+ * @group AA241x High Params		(always include this)
+ */
+PARAM_DEFINE_FLOAT(AAH_MANPITCH, 0.0f);
+
+/**
+ * @unit none 						(the unit attribute (not required, just helps for sanity))
+ * @group AA241x High Params		(always include this)
+ */
+PARAM_DEFINE_FLOAT(AAH_MANROLL, 0.0f);
+/**
+ * @unit none 						(the unit attribute (not required, just helps for sanity))
+ * @group AA241x High Params		(always include this)
+ */
+PARAM_DEFINE_FLOAT(AAH_MANRUD, 0.0f);
 
 
 //NATHAN: Do I need to include the @unit none and @group AA241x High Params for all of these?
@@ -222,7 +247,11 @@ int aah_parameters_init(struct aah_param_handles *h)
     h->integral_sideslip_gain       = param_find("AAH_ISIDESLIPG");
     h->proportional_throttle_gain   = param_find("AAH_PTHROTTLEG");
     h->integral_throttle_gain       = param_find("AAH_ITHROTTLEG");
-
+    //Parameters to Enable Partial Manual Control
+    h->man_throt       = param_find("AAH_MANTHROT");
+    h->man_pitch      = param_find("AAH_MANPITCH");
+    h->man_roll       = param_find("AAH_MANROLL");
+    h->man_rudder       = param_find("AAH_MANRUD");
 
     // TODO: add the above line for each of your custom parameters........
 
@@ -248,6 +277,11 @@ int aah_parameters_update(const struct aah_param_handles *h, struct aah_params *
     param_get(h->integral_sideslip_gain, &(p->integral_sideslip_gain));
     param_get(h->proportional_throttle_gain, &(p->proportional_throttle_gain));
     param_get(h->integral_throttle_gain, &(p->integral_throttle_gain));
+        //Enable Manual Flight
+    param_get(h->man_throt, &(p->man_throt));
+    param_get(h->man_pitch, &(p->man_pitch));
+    param_get(h->man_roll, &(p->man_roll));
+    param_get(h->man_rudder, &(p->man_rudder));
 
     return OK;
 }
