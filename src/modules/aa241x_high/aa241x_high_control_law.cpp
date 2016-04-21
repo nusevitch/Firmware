@@ -57,18 +57,19 @@ using namespace aa241x_high;
  * feel free to add all the function you'd like, but make sure all
  * the code you'd like executed on a loop is in this function.
  */
-void flight_control() {
 
-    float my_float_variable = 0.0f;		/**< example float variable */
-    float altitude_desired;
-    float ground_course_desired;
-    float desired_sideslip_angle;              //Desired Sideslip Angle
-    float groundspeed_desired;
+float my_float_variable = 0.0f;		/**< example float variable */
+float altitude_desired=0.0f;
+float ground_course_desired=0.0f;
+float desired_sideslip_angle= 0.0f;              //Desired Sideslip Angle
+float groundspeed_desired = 0.0f;
 //Can I declare variables here, or do I also need to put them in the header file?
-    float    integral_course_error;  //Initialize the Integral Terms to 0
-    float    integral_altitude_error; //Initialize Altitude Error
-    float    integral_sideslip_error; //Initialize Side Slip Error Hold Loop
-    float    integral_groundspeed_error;
+float    integral_course_error = 0.0f;  //Initialize the Integral Terms to 0
+float    integral_altitude_error =0.0f; //Initialize Altitude Error
+float    integral_sideslip_error =0.0f; //Initialize Side Slip Error Hold Loop
+float    integral_groundspeed_error= 0.0f;
+
+void flight_control() {
 
 
     // An example of how to run a one time 'setup' for example to lock one's altitude and heading...
@@ -147,7 +148,7 @@ float Dt=hrt_absolute_time() - previous_loop_timestamp; //Compute the loop time,
 
     //PI Controller for SideSlip Effort
     //SideSlip Angle Control Loop
-    float sideslip=ground_course-yaw;
+    float sideslip=yaw;
     integral_sideslip_error=integral_sideslip_error+(desired_sideslip_angle - sideslip)*Dt;
     float proportionalSideSlipCorrection = aah_parameters.proportional_sideslip_gain * (desired_sideslip_angle - sideslip);  //Signs need to be switched here?
     float IntegralSideSlipCorrection = aah_parameters.integral_sideslip_gain * (integral_sideslip_error);  //how to get Derivative INt
@@ -164,8 +165,11 @@ float Dt=hrt_absolute_time() - previous_loop_timestamp; //Compute the loop time,
     // Do bounds checking to keep the roll correction within the -1..1 limits of the servo output
     if (RollEffort > 1.0f) {
         RollEffort = 1.0f;
+        //Is antiwindup needed?  I don't think so, integrator is on ground course, not roll
+        //integral_groundspeed_error=integral_groundspeed_error-(groundspeed_desired - ground_speed)*Dt; //Anti Windup
     } else if (RollEffort < -1.0f ) {
         RollEffort = -1.0f;
+        //integral_groundspeed_error=integral_groundspeed_error-(groundspeed_desired - ground_speed)*Dt; //Anti Windup
     }
 
     // Do bounds checking to keep the roll correction within the -1..1 limits of the servo output
@@ -185,8 +189,10 @@ float Dt=hrt_absolute_time() - previous_loop_timestamp; //Compute the loop time,
     // Do bounds checking to keep the rudder correction within the -1..1 limits of the servo output
     if (YawEffort > 1.0f) {
         YawEffort = 1.0f;
+        integral_sideslip_error=integral_sideslip_error-(desired_sideslip_angle - sideslip)*Dt; // Anti-Windup
     } else if (YawEffort < -1.0f ) {
         YawEffort = -1.0f;
+        integral_sideslip_error=integral_sideslip_error-(desired_sideslip_angle - sideslip)*Dt; //Anti-Windup
     }
 
     // ENSURE THAT YOU SET THE SERVO OUTPUTS!!!
@@ -202,6 +208,6 @@ float Dt=hrt_absolute_time() - previous_loop_timestamp; //Compute the loop time,
     pitch_servo_out = PitchEffort; // PD Control on Pitch
     //yaw_servo_out = man_yaw_in;
     yaw_servo_out = YawEffort;
-    throttle_servo_out=throttle_effort;
+    throttle_servo_out= 0.0f; //throttle_effort;  //throttle set to 0 for testing
     //throttle_servo_out = man_throttle_in;
 }

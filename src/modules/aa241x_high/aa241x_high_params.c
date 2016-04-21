@@ -83,17 +83,117 @@ PARAM_DEFINE_FLOAT(AAH_PROPROLLGAIN, 1.0f);
  * @group AA241x High Params		(always include this)
  */
 PARAM_DEFINE_FLOAT(AAH_DROLLG, 1.0f);
-
+/**
+ * This is an example parameter.  The name of the parameter in QGroundControl
+ * will be AAH_PROPROLLGAIN and will be in the AAH dropdown.  Make sure to always
+ * start your parameters with AAH to have them all in one place.
+ *
+ * The default value of this float parameter will be 1.0.
+ *
+ * @unit none 						(the unit attribute (not required, just helps for sanity))
+ * @group AA241x High Params		(always include this)
+ */
 PARAM_DEFINE_FLOAT(AAH_PPITCHG, 1.0f);
+/**
+ * This is an example parameter.  The name of the parameter in QGroundControl
+ * will be AAH_PROPROLLGAIN and will be in the AAH dropdown.  Make sure to always
+ * start your parameters with AAH to have them all in one place.
+ *
+ * The default value of this float parameter will be 1.0.
+ *
+ * @unit none 						(the unit attribute (not required, just helps for sanity))
+ * @group AA241x High Params		(always include this)
+ */
 PARAM_DEFINE_FLOAT(AAH_DPITCHG, 1.0f);
+/**
+ * This is an example parameter.  The name of the parameter in QGroundControl
+ * will be AAH_PROPROLLGAIN and will be in the AAH dropdown.  Make sure to always
+ * start your parameters with AAH to have them all in one place.
+ *
+ * The default value of this float parameter will be 1.0.
+ *
+ * @unit none 						(the unit attribute (not required, just helps for sanity))
+ * @group AA241x High Params		(always include this)
+ */
 PARAM_DEFINE_FLOAT(AAH_PCOURSEG, 1.0f);
+/**
+ * This is an example parameter.  The name of the parameter in QGroundControl
+ * will be AAH_PROPROLLGAIN and will be in the AAH dropdown.  Make sure to always
+ * start your parameters with AAH to have them all in one place.
+ *
+ * The default value of this float parameter will be 1.0.
+ *
+ * @unit none 						(the unit attribute (not required, just helps for sanity))
+ * @group AA241x High Params		(always include this)
+ */
 PARAM_DEFINE_FLOAT(AAH_ICOURSEG, 1.0f);
+/**
+ * This is an example parameter.  The name of the parameter in QGroundControl
+ * will be AAH_PROPROLLGAIN and will be in the AAH dropdown.  Make sure to always
+ * start your parameters with AAH to have them all in one place.
+ *
+ * The default value of this float parameter will be 1.0.
+ *
+ * @unit none 						(the unit attribute (not required, just helps for sanity))
+ * @group AA241x High Params		(always include this)
+ */
 PARAM_DEFINE_FLOAT(AAH_PALTITUDEG, 1.0f);
+/**
+ * This is an example parameter.  The name of the parameter in QGroundControl
+ * will be AAH_PROPROLLGAIN and will be in the AAH dropdown.  Make sure to always
+ * start your parameters with AAH to have them all in one place.
+ *
+ * The default value of this float parameter will be 1.0.
+ *
+ * @unit none 						(the unit attribute (not required, just helps for sanity))
+ * @group AA241x High Params		(always include this)
+ */
 PARAM_DEFINE_FLOAT(AAH_IALTITUDEG, 1.0f);
+/**
+ * This is an example parameter.  The name of the parameter in QGroundControl
+ * will be AAH_PROPROLLGAIN and will be in the AAH dropdown.  Make sure to always
+ * start your parameters with AAH to have them all in one place.
+ *
+ * The default value of this float parameter will be 1.0.
+ *
+ * @unit none 						(the unit attribute (not required, just helps for sanity))
+ * @group AA241x High Params		(always include this)
+ */
 PARAM_DEFINE_FLOAT(AAH_PSIDESLIPG, 1.0f);
+/**
+ * This is an example parameter.  The name of the parameter in QGroundControl
+ * will be AAH_PROPROLLGAIN and will be in the AAH dropdown.  Make sure to always
+ * start your parameters with AAH to have them all in one place.
+ *
+ * The default value of this float parameter will be 1.0.
+ *
+ * @unit none 						(the unit attribute (not required, just helps for sanity))
+ * @group AA241x High Params		(always include this)
+ */
 PARAM_DEFINE_FLOAT(AAH_ISIDESLIPG, 1.0f);
+/**
+ * This is an example parameter.  The name of the parameter in QGroundControl
+ * will be AAH_PROPROLLGAIN and will be in the AAH dropdown.  Make sure to always
+ * start your parameters with AAH to have them all in one place.
+ *
+ * The default value of this float parameter will be 1.0.
+ *
+ * @unit none 						(the unit attribute (not required, just helps for sanity))
+ * @group AA241x High Params		(always include this)
+ */
 PARAM_DEFINE_FLOAT(AAH_PTHROTTLEG, 1.0f);
+/**
+ * This is an example parameter.  The name of the parameter in QGroundControl
+ * will be AAH_PROPROLLGAIN and will be in the AAH dropdown.  Make sure to always
+ * start your parameters with AAH to have them all in one place.
+ *
+ * The default value of this float parameter will be 1.0.
+ *
+ * @unit none 						(the unit attribute (not required, just helps for sanity))
+ * @group AA241x High Params		(always include this)
+ */
 PARAM_DEFINE_FLOAT(AAH_ITHROTTLEG, 1.0f);
+
 
 //NATHAN: Do I need to include the @unit none and @group AA241x High Params for all of these?
 // TODO: define custom parameters here
