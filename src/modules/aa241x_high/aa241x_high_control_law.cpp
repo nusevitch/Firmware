@@ -68,6 +68,8 @@ float    integral_course_error = 0.0f;  //Initialize the Integral Terms to 0
 float    integral_altitude_error =0.0f; //Initialize Altitude Error
 float    integral_sideslip_error =0.0f; //Initialize Side Slip Error Hold Loop
 float    integral_groundspeed_error= 0.0f;
+float    Max_Roll_Angle=1.0f;  //Maximum roll angle in Radians, Corresponds to 59 degrees
+float    Max_Pitch_Angle=0.5f; //Maximum Pitch Angle in Radians
 
 void flight_control() {
 
@@ -121,6 +123,17 @@ float Dt=hrt_absolute_time() - previous_loop_timestamp; //Compute the loop time,
     roll_desired = proportionalCourseCorrection+IntegralCourseCorrection; //Get Commanded Roll from Higher Loop
     //roll_rate_desired= 0.0f;//  ??????? How do I get this?
 
+    // Do bounds checking for commanded roll
+    //Also add anti-windup
+    if (roll_desired > Max_Roll_Angle) {
+        roll_desired = Max_Roll_Angle;
+        integral_course_error=integral_course_error-(ground_course_desired - ground_course)*Dt;
+    } else if ( roll_desired< -Max_Roll_Angle ) {
+        roll_desired = -Max_Roll_Angle;
+        integral_course_error=integral_course_error-(ground_course_desired - ground_course)*Dt;
+    }
+
+
     // Now use your parameter gain and multiply by the error from desired
     float proportionalRollCorrection = aah_parameters.proportional_roll_gain * (roll - roll_desired);
     float derivativeRollCorrection= aah_parameters.derivative_roll_gain * (roll_rate);
@@ -141,6 +154,17 @@ float Dt=hrt_absolute_time() - previous_loop_timestamp; //Compute the loop time,
     pitch_desired=  proportionalAltitudeCorrection+IntegralAltitudeCorrection;// This needs to come from the low priority loop
     //pitch_rate_desired= 0.0f; //Desired Pitch Rate  // Do I need to numerically take derivative to get this?
 
+    // Do bounds checking for pitch_desired. Add some antiwindup here?
+    if (pitch_desired > Max_Pitch_Angle) {
+        pitch_desired = Max_Pitch_Angle;
+        //Anti-Windup
+        integral_altitude_error=integral_altitude_error-(altitude_desired - position_D_baro)*Dt;
+    } else if ( pitch_desired< -Max_Pitch_Angle ) {
+        pitch_desired = -Max_Pitch_Angle;
+        //More AntiWindup
+        integral_altitude_error=integral_altitude_error-(altitude_desired - position_D_baro)*Dt;
+    }
+
     float proportionalPitchCorrection = aah_parameters.proportional_pitch_gain * (pitch - pitch_desired);
     float derivativePitchCorrection= aah_parameters.derivative_pitch_gain *(pitch_rate);
 
@@ -148,7 +172,9 @@ float Dt=hrt_absolute_time() - previous_loop_timestamp; //Compute the loop time,
 
     //PI Controller for SideSlip Effort
     //SideSlip Angle Control Loop
-    float sideslip=yaw;
+    float sideslip=ground_course-yaw; //Yaw is artficial heading
+
+    //might be issues here
     integral_sideslip_error=integral_sideslip_error+(desired_sideslip_angle - sideslip)*Dt;
     float proportionalSideSlipCorrection = aah_parameters.proportional_sideslip_gain * (desired_sideslip_angle - sideslip);  //Signs need to be switched here?
     float IntegralSideSlipCorrection = aah_parameters.integral_sideslip_gain * (integral_sideslip_error);  //how to get Derivative INt
