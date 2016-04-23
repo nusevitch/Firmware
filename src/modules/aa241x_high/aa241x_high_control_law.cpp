@@ -91,7 +91,8 @@ void flight_control() {
         integral_groundspeed_error=0.0f;
     }
 
-float Dt=hrt_absolute_time() - previous_loop_timestamp; //Compute the loop time, right now assuming 60 Hz, can compute actual time
+    //What units is this in?
+float Dt=(hrt_absolute_time() - previous_loop_timestamp)/1000000.0f; //Compute the loop time, right now assuming 60 Hz, can compute actual time
     // TODO: write all of your flight control here...
 
 
@@ -208,8 +209,12 @@ float Dt=hrt_absolute_time() - previous_loop_timestamp; //Compute the loop time,
     // Do bounds checking to keep the throttle correction within the -1..1 limits of the servo output
     if (throttle_effort > 1.0f) {
         throttle_effort = 1.0f;
+        //Anti Windup
+        integral_groundspeed_error=integral_groundspeed_error-(groundspeed_desired - ground_speed)*Dt;
     } else if (throttle_effort < -1.0f ) {
         throttle_effort = -1.0f;
+        //Anti Windup
+        integral_groundspeed_error=integral_groundspeed_error-(groundspeed_desired - ground_speed)*Dt;
     }
 
     // Do bounds checking to keep the rudder correction within the -1..1 limits of the servo output
