@@ -79,6 +79,14 @@ struct aah_params {
     float man_pitch;
     float man_roll;
     float man_rudder;
+    //Allow for Waypoint Following
+    float K_Line_Follow;
+    float Max_Line_Angle;
+    float Enable_Waypoints;
+    //Turning
+    float K_Orbit;
+    float Turn_Radius;
+    float Enable_Orbit;
     // TODO: add custom parameter variable names here......
 
 };
@@ -115,6 +123,14 @@ struct aah_param_handles {
     param_t man_pitch;
     param_t man_roll;
     param_t man_rudder;
+    //Enable Waypoint Following
+    param_t K_Line_Follow;
+    param_t Max_Line_Angle;
+    param_t Enable_Waypoints;
+    //Enable Orbit
+    param_t K_Orbit;
+    param_t Turn_Radius;
+    param_t Enable_Orbit;
 };
 
 /**

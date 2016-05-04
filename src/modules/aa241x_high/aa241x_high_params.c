@@ -219,8 +219,46 @@ PARAM_DEFINE_FLOAT(AAH_MANROLL, 0.0f);
  */
 PARAM_DEFINE_FLOAT(AAH_MANRUD, 0.0f);
 
+/**
+ * @unit none 						(the unit attribute (not required, just helps for sanity))
+ * @group AA241x High Params		(always include this)
+ */
+PARAM_DEFINE_FLOAT(AAH_KLINEG, 0.1f);
 
-//NATHAN: Do I need to include the @unit none and @group AA241x High Params for all of these?
+/**
+ * @unit none 						(the unit attribute (not required, just helps for sanity))
+ * @group AA241x High Params		(always include this)
+ */
+PARAM_DEFINE_FLOAT(AAH_MAXANG, 1.57f);  //Initialized to be pi/2
+
+/**
+ * @unit none 						(the unit attribute (not required, just helps for sanity))
+ * @group AA241x High Params		(always include this)
+ */
+PARAM_DEFINE_FLOAT(AAH_FOLLOWWAY, 0.0f);  //Logical, Follow Waypoints or No?
+
+/**
+ * @unit none 						(the unit attribute (not required, just helps for sanity))
+ * @group AA241x High Params		(always include this)
+ */
+PARAM_DEFINE_FLOAT(AAH_KORBIT, 0.0f);  //Logical, Follow Waypoints or No?
+
+/**
+ * @unit none 						(the unit attribute (not required, just helps for sanity))
+ * @group AA241x High Params		(always include this)
+ */
+PARAM_DEFINE_FLOAT(AAH_ORBITR, 0.0f);  //Logical, Follow Waypoints or No?
+
+/**
+ * @unit none 						(the unit attribute (not required, just helps for sanity))
+ * @group AA241x High Params		(always include this)
+ */
+PARAM_DEFINE_FLOAT(AAH_ENAORBIT, 0.0f);  //Logical, Follow Waypoints or No?
+
+
+
+
+//NATHAN: The @unit none and @group AA241x High Params are necessary despite being in a comment
 // TODO: define custom parameters here
 
 
@@ -252,7 +290,14 @@ int aah_parameters_init(struct aah_param_handles *h)
     h->man_pitch      = param_find("AAH_MANPITCH");
     h->man_roll       = param_find("AAH_MANROLL");
     h->man_rudder       = param_find("AAH_MANRUD");
-
+    //Parameters for Line Following
+    h-> K_Line_Follow   =param_find("AAH_KLINEG");
+    h-> Max_Line_Angle  =param_find("AAH_MAXANG");
+    h-> Enable_Waypoints=param_find("AAH_FOLLOWWAY");
+    //Parameters for Orbit
+    h-> K_Orbit   =param_find("AAH_KORBIT");
+    h-> Turn_Radius  =param_find("AAH_ORBITR");
+    h-> Enable_Orbit=param_find("AAH_ENAORBIT");
     // TODO: add the above line for each of your custom parameters........
 
     return OK;
@@ -282,6 +327,14 @@ int aah_parameters_update(const struct aah_param_handles *h, struct aah_params *
     param_get(h->man_pitch, &(p->man_pitch));
     param_get(h->man_roll, &(p->man_roll));
     param_get(h->man_rudder, &(p->man_rudder));
+    //Enable Waypoints
+    param_get(h->K_Line_Follow, &(p->K_Line_Follow));
+    param_get(h->Max_Line_Angle, &(p->Max_Line_Angle));
+    param_get(h->Enable_Waypoints, &(p->Enable_Waypoints));
+    //Enable Orbit
+    param_get(h->K_Orbit, &(p->K_Orbit));
+    param_get(h->Turn_Radius, &(p->Turn_Radius));
+    param_get(h->Enable_Orbit, &(p->Enable_Orbit));
 
     return OK;
 }

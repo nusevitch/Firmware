@@ -70,6 +70,97 @@ float    integral_sideslip_error =0.0f; //Initialize Side Slip Error Hold Loop
 float    integral_groundspeed_error= 0.0f;
 float    Max_Roll_Angle=1.0f;  //Maximum roll angle in Radians, Corresponds to 59 degrees
 float    Max_Pitch_Angle=0.5f; //Maximum Pitch Angle in Radians
+int      WayPoint_Index=0;      //Keeps Track of which waypoint to follow
+float    epy=0.0f;              //Lateral Deviance from Desired Line
+float    qN=0.0f;               //North Component of Vectors pointing between waypoints
+float    qE=0.0f;               //East Component of Vectors Pointing Between Waypoints
+float   Xq=0.0f;
+float   Xc=0.0f;
+
+
+//This vector will give all of the necessary waypoints
+//Waypoint Vector is organized like this
+//      rn, re, qn, qe, type
+//float Waypoint[][2]= {{0.0f,  0.0f},   //Bottom Left
+//                      {100.0f, 0.0f},   //Top
+//                      {100.0f, 100.0f},  //
+//                      {0.0f, 100.0f},   //
+//                      };
+
+//These Waypoints should work for Pset2
+float Waypoint[][2]= {{47.0f,  155.0f},   //Bottom Left
+                      {-53.0f, 155.0f},   //Top
+                      {-128.0f, 80.0f},  //
+                      {-128.0f, 5.0f},   //
+                      {-53.0f, -70.0f },
+                      {47.0f, -70.0f },
+                      {144.0f, -44.0f},
+                      {47.0f, 155.0f}
+                     };
+
+
+//There are many oddly relevant functions in lib/geo/geo.c
+//waypoint_from_heading_and_distance();
+float Straight_Line(float Waypoint[][2], int &WayPoint_Index);              /* Prototype */
+//A function to Follow a Straight Line
+
+
+float Turn(float qN, float qE);
+// Currently this is in a testing configuration, can be changed to waypoints when needed.
+//float Turn(float Waypoint[][2], int &WayPoint_Index){
+float Turn(float qN, float qE) {
+    //Next two values enable waypoint following
+    //qN=Waypoint[WayPoint_Index][1];
+    //qE=Waypoint[WayPoint_Index][2];
+   // float d= ((qN-position_N)^2.0f+(qN-position_N)^2.0f)^.5f; // I think we need to use pow for this
+    float d= pow(pow(qN-position_N,2.0)+pow(qE-position_E,2.0),0.5);
+    float phi=atan2f(position_E-qE,position_N-qN)+3.14159f/2.0f; //    aah_parameters.K_Orbit
+    float Xc=phi+(3.14159f*0.5f+atanf(aah_parameters.K_Orbit*(d-aah_parameters.Turn_Radius)/aah_parameters.Turn_Radius));
+
+    return Xc;
+}
+
+
+float Straight_Line(float Waypoint[][2], int &WayPoint_Index ){
+    //rn, re are the North/East Components of a position vector to a point on a line
+    //qn, qe give the orientation of a vector along the line.
+    //Should I store all of this info into a big array of waypoints?  that might be good....
+    //Get Unit Vector from current waypoint to next waypoint
+   // qN=Waypoint[WayPoint_Index+1][1]-Waypoint[WayPoint_Index+1][1]; //First Index needs a plus one
+   // qE=Waypoint[WayPoint_Index+1][2]-Waypoint[WayPoint_Index+1][2]; //First index needs a plus one
+    qN=Waypoint[WayPoint_Index+1][1]-Waypoint[WayPoint_Index][1]; //First Index needs a plus one
+    qE=Waypoint[WayPoint_Index+1][2]-Waypoint[WayPoint_Index][2]; //First in
+    float pN=Waypoint[WayPoint_Index+1][1]-position_N;
+    float pE=Waypoint[WayPoint_Index+1][2]-position_E;
+    //Compute the Dot Product of Q and P to see fi we have crossed the end plane
+    if(qN*pN+qE*pE<0.0f){
+        WayPoint_Index=WayPoint_Index+1;
+        if (WayPoint_Index>8){   //Reset the waypoints once the end is reached
+            WayPoint_Index=0;
+        }
+    }
+
+    //Components in Both Directions
+    //Do I need to use pow or something to get these values?
+    //I think no need to normalize..., all I need is the angle
+    //qN=YComp/((Ycomp^2+XComp^2))^(0.5);  //Data Type Issues?
+    //qE=YComp/((Ycomp^2+XComp^2))^(0.5);  //
+    //These are the Position Variables the I have access to
+    //float position_N = 0.0f;
+    //float position_E = 0.0f;
+    Xq=atan2f(qE,qN); //Desired path (Angle from North)
+    // Tunign Parameters, Need to get these from Q Ground Control
+    //Kpath=.1; //A gain Governing how direct the transition will be
+    //Xinf=3.14159/2.0; //Maximum Angle to make with desired path, maximum is pi/2
+    //Compute the Lateral Distance from the Correct Line
+    epy=-sinf(Xq)*(position_N- Waypoint[WayPoint_Index][1])+cosf(Xq)*(position_E-Waypoint[WayPoint_Index][2]);
+    //Compute the Commanded Course Angle
+    Xc=Xq-aah_parameters.Max_Line_Angle*2.0f/3.14159f*atanf(aah_parameters.K_Line_Follow*epy);
+    return Xc;
+}
+
+//  Also need to check to know where to switch waypoints... Need a manager to check and increment Waypoint_Index
+//Another Parameter to Control the Mode???? Ie. Follow Waypoints?
 
 void flight_control() {
 
@@ -89,6 +180,12 @@ void flight_control() {
         integral_altitude_error=0.0f; //Initialize Altitude Error
         integral_sideslip_error=0.0f; //Initialize Side Slip Error Hold Loop
         integral_groundspeed_error=0.0f;
+
+        if( aah_parameters.Enable_Orbit>0.5f) {
+            qN=aah_parameters.Turn_Radius*cosf(ground_course+3.14159f/2.0f);
+            qE=aah_parameters.Turn_Radius*sinf(ground_course+3.14159f/2.0f);
+        }
+
     }
 
     //What units is this in?
@@ -102,11 +199,8 @@ float Dt=(hrt_absolute_time() - previous_loop_timestamp)/1000000.0f; //Compute t
     // setting high data value example
     high_data.variable_name1 = my_float_variable;
 
-
     // setting low data value example
     low_data.variable_name1 = my_float_variable;
-
-
 
     // // Make a really simple proportional roll stabilizer // //
     //
@@ -115,7 +209,17 @@ float Dt=(hrt_absolute_time() - previous_loop_timestamp)/1000000.0f; //Compute t
 
     // Lateral Dyanamics
 
-    // Compue the INtegral of the Error. Add anti windup here?
+    //Get Computed desired Ground Course From Vector Field, if enabled
+    if( aah_parameters.Enable_Waypoints>0.5f) {
+        ground_course_desired=Straight_Line( Waypoint, WayPoint_Index );
+    }
+
+    if( aah_parameters.Enable_Orbit>0.5f) {
+        ground_course_desired=Turn( qN, qE );  //Command a turn, right now should work
+    }
+
+
+    // Compue the Integral of the Error. Add anti windup here?
     integral_course_error=integral_course_error+(ground_course_desired - ground_course)*Dt;
     float proportionalCourseCorrection = aah_parameters.proportional_course_gain * (ground_course_desired - ground_course);
     float IntegralCourseCorrection = aah_parameters.integral_course_gain * (integral_course_error);  //how to get Derivative INt
