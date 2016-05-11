@@ -38,7 +38,7 @@
  * control law for the AA241x class.
  *
  *  @author Adrien Perkins		<adrienp@stanford.edu>
- *  @author YOUR NAME			<YOU@EMAIL.COM>
+ *  @author Nathan Usevitch		<usevitch@stanford.edu>
  */
 
 #include <uORB/uORB.h>
@@ -87,17 +87,33 @@ float   Xc=0.0f;
 //                      {0.0f, 100.0f},   //
 //                      };
 
-//These Waypoints should work for Pset2
-float Waypoint[][2]= {{47.0f,  155.0f},   //Bottom Left
-                      {-53.0f, 155.0f},   //Top
-                      {-128.0f, 80.0f},  //
-                      {-128.0f, 5.0f},   //
-                      {-53.0f, -70.0f },
-                      {47.0f, -70.0f },
-                      {144.0f, -44.0f},
-                      {47.0f, 155.0f}
-                     };
+////These Waypoints should work for Pset3
+//float Waypoint[][2]= {{47.0f,  155.0f},   //Bottom Left
+//                      {-53.0f, 155.0f},   //Top
+//                      {-128.0f, 80.0f},  //
+//                      {-128.0f, 5.0f},   //
+//                      {-53.0f, -70.0f },
+//                      {47.0f, -70.0f },
+//                      {144.0f, -44.0f},
+//                      {47.0f, 155.0f}
+//                     };
 
+//float Waypoint[][2]= {{-50.0f,  100.0f},   //Bottom Left
+//                      {-50.0f, 0.0f},   //Top
+//                      {0.0f, -75.0f},  //
+//                      {100.0f, -75.0f},   //
+//                      {150.0f, 0.0f },
+//                      {100.0f, 100.0f },
+//                      {50.0f, 100.0f},
+//                      {-47.0f, 74.0f},
+//                      {-134.0f, 24.0f},
+//                     };
+
+float Waypoint[][2]= {{150.0f, 0.0f },   //Bottom Left
+                      {0.0f, 100.0f},   //Top
+                      {-100.0f, 100.0f},  //
+                      {0.0f,-100.0f},
+                      };    //
 
 //There are many oddly relevant functions in lib/geo/geo.c
 //waypoint_from_heading_and_distance();
@@ -180,6 +196,7 @@ void flight_control() {
         integral_altitude_error=0.0f; //Initialize Altitude Error
         integral_sideslip_error=0.0f; //Initialize Side Slip Error Hold Loop
         integral_groundspeed_error=0.0f;
+        WayPoint_Index=0;
 
         if( aah_parameters.Enable_Orbit>0.5f) {
             qN=aah_parameters.Turn_Radius*cosf(ground_course+3.14159f/2.0f);
@@ -330,6 +347,8 @@ float Dt=(hrt_absolute_time() - previous_loop_timestamp)/1000000.0f; //Compute t
         integral_sideslip_error=integral_sideslip_error-(desired_sideslip_angle - sideslip)*Dt; //Anti-Windup
     }
 
+
+
     // ENSURE THAT YOU SET THE SERVO OUTPUTS!!!
     // outputs should be set to values between -1..1 (except throttle is 0..1)
     // where zero is no actuation, and -1,1 are full throw in either the + or - directions
@@ -362,7 +381,7 @@ float Dt=(hrt_absolute_time() - previous_loop_timestamp)/1000000.0f; //Compute t
     if (aah_parameters.man_rudder>0.5f){
         yaw_servo_out = man_yaw_in;
     } else {
-        yaw_servo_out = -YawEffort; //Yaw Effort, Negative sign comes from testing
+        yaw_servo_out = roll_servo_out*aah_parameters.Rudder_Prop; //Gear the rudder and Ailerons together
     }
 
     //Set Throttle Outputs
@@ -371,5 +390,8 @@ float Dt=(hrt_absolute_time() - previous_loop_timestamp)/1000000.0f; //Compute t
     } else {
         throttle_servo_out= throttle_effort; //throttle_effort;
     }
+
+
+
 
 }

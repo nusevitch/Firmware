@@ -87,6 +87,8 @@ struct aah_params {
     float K_Orbit;
     float Turn_Radius;
     float Enable_Orbit;
+    //Enable Gearing of Rudder
+    float Rudder_Prop;
     // TODO: add custom parameter variable names here......
 
 };
@@ -131,6 +133,8 @@ struct aah_param_handles {
     param_t K_Orbit;
     param_t Turn_Radius;
     param_t Enable_Orbit;
+    //Enable Gearing
+    param_t Rudder_Prop;
 };
 
 /**
