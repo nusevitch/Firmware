@@ -98,26 +98,36 @@ float   Xc=0.0f;
 //                      {47.0f, 155.0f}
 //                     };
 
-//float Waypoint[][2]= {{-50.0f,  100.0f},   //Bottom Left
-//                      {-50.0f, 0.0f},   //Top
-//                      {0.0f, -75.0f},  //
-//                      {100.0f, -75.0f},   //
-//                      {150.0f, 0.0f },
-//                      {100.0f, 100.0f },
-//                      {50.0f, 100.0f},
-//                      {-47.0f, 74.0f},
-//                      {-134.0f, 24.0f},
-//                     };
-
+//These Waypoints Fly a simple course, allowsfor testing switching
 float Waypoint[][2]= {{150.0f, 0.0f },   //Bottom Left
                       {0.0f, 100.0f},   //Top
                       {-100.0f, 100.0f},  //
                       {0.0f,-100.0f},
+                      {1001.0f, 1001.0f}
                       };    //
+//These waypoints will just be a straight shot out into the lake, will enable us to test line follow
+float Waypoint2[][2]= {{50.0f, 0.0f},
+                       {-100.0f, 100.0f},
+                       {0.0f, -100.0f},
+                       {1001.0f, 1001.0f},
+                      };
+
+//These waypoints will complete the Pset
+float Waypoint3[][2]= {{-50.0f,  100.0f},   //Bottom Left
+                      {-50.0f, 0.0f},   //Top
+                      {0.0f, -75.0f},  //
+                      {100.0f, -75.0f},   //
+                      {150.0f, 0.0f },
+                      {100.0f, 100.0f },
+                      {50.0f, 100.0f},
+                      {-47.0f, 74.0f},
+                      {-134.0f, 24.0f},
+                      {1001.0f, 1001.0f},
+                     };
 
 //There are many oddly relevant functions in lib/geo/geo.c
 //waypoint_from_heading_and_distance();
-float Straight_Line(float Waypoint[][2], int &WayPoint_Index);              /* Prototype */
+float Straight_Line(float Waypoint[][2], int *WayPoint_Index);              /* Prototype */
 //A function to Follow a Straight Line
 
 
@@ -133,45 +143,51 @@ float Turn(float qN, float qE) {
     float phi=atan2f(position_E-qE,position_N-qN)+3.14159f/2.0f; //    aah_parameters.K_Orbit
     float Xc=phi+(3.14159f*0.5f+atanf(aah_parameters.K_Orbit*(d-aah_parameters.Turn_Radius)/aah_parameters.Turn_Radius));
 
+    //Adjust for the way Ground Course is measure (-pi,pi]
+    if (Xc>3.14159f){
+        Xc=Xc-2.0f*3.14159f;
+    }
+
+
     return Xc;
 }
 
 
-float Straight_Line(float Waypoint[][2], int &WayPoint_Index ){
+float Straight_Line(float Waypoint[][2], int *WayPoint_Index ){
     //rn, re are the North/East Components of a position vector to a point on a line
     //qn, qe give the orientation of a vector along the line.
     //Should I store all of this info into a big array of waypoints?  that might be good....
     //Get Unit Vector from current waypoint to next waypoint
    // qN=Waypoint[WayPoint_Index+1][1]-Waypoint[WayPoint_Index+1][1]; //First Index needs a plus one
    // qE=Waypoint[WayPoint_Index+1][2]-Waypoint[WayPoint_Index+1][2]; //First index needs a plus one
-    qN=Waypoint[WayPoint_Index+1][1]-Waypoint[WayPoint_Index][1]; //First Index needs a plus one
-    qE=Waypoint[WayPoint_Index+1][2]-Waypoint[WayPoint_Index][2]; //First in
-    float pN=Waypoint[WayPoint_Index+1][1]-position_N;
-    float pE=Waypoint[WayPoint_Index+1][2]-position_E;
+    qN=Waypoint[*WayPoint_Index+1][1]-Waypoint[*WayPoint_Index][1]; //First Index needs a plus one
+    qE=Waypoint[*WayPoint_Index+1][2]-Waypoint[*WayPoint_Index][2]; //First in
+
+    //These values are used for checking if the plane is crossed
+    float pNC=position_N-Waypoint[*WayPoint_Index+1][1]; //Order of these
+    float pEC=position_E-Waypoint[*WayPoint_Index+1][2]; //
+
     //Compute the Dot Product of Q and P to see fi we have crossed the end plane
-    if(qN*pN+qE*pE<0.0f){
-        WayPoint_Index=WayPoint_Index+1;
-        if (WayPoint_Index>8){   //Reset the waypoints once the end is reached
-            WayPoint_Index=0;
+    if(qN*pNC+qE*pEC>0.0f){
+        *WayPoint_Index=*WayPoint_Index+1;
+        if (Waypoint[*WayPoint_Index+1][1]>1000.0f){   //Reset the waypoints once the end is reached
+            *WayPoint_Index=0;
         }
+        qN=Waypoint[*WayPoint_Index+1][1]-Waypoint[*WayPoint_Index][1]; //First Index needs a plus one
+        qE=Waypoint[*WayPoint_Index+1][2]-Waypoint[*WayPoint_Index][2]; //First in
     }
 
-    //Components in Both Directions
-    //Do I need to use pow or something to get these values?
-    //I think no need to normalize..., all I need is the angle
-    //qN=YComp/((Ycomp^2+XComp^2))^(0.5);  //Data Type Issues?
-    //qE=YComp/((Ycomp^2+XComp^2))^(0.5);  //
-    //These are the Position Variables the I have access to
-    //float position_N = 0.0f;
-    //float position_E = 0.0f;
     Xq=atan2f(qE,qN); //Desired path (Angle from North)
-    // Tunign Parameters, Need to get these from Q Ground Control
-    //Kpath=.1; //A gain Governing how direct the transition will be
-    //Xinf=3.14159/2.0; //Maximum Angle to make with desired path, maximum is pi/2
-    //Compute the Lateral Distance from the Correct Line
-    epy=-sinf(Xq)*(position_N- Waypoint[WayPoint_Index][1])+cosf(Xq)*(position_E-Waypoint[WayPoint_Index][2]);
+
+    epy=-sinf(Xq)*(position_N- Waypoint[*WayPoint_Index][1])+cosf(Xq)*(position_E-Waypoint[*WayPoint_Index][2]);
     //Compute the Commanded Course Angle
     Xc=Xq-aah_parameters.Max_Line_Angle*2.0f/3.14159f*atanf(aah_parameters.K_Line_Follow*epy);
+
+    //Adjust for the Maximum Angle
+    if (Xc>3.14159f){
+        Xc=Xc-2.0f*3.14159f;
+    }
+
     return Xc;
 }
 
@@ -228,7 +244,21 @@ float Dt=(hrt_absolute_time() - previous_loop_timestamp)/1000000.0f; //Compute t
 
     //Get Computed desired Ground Course From Vector Field, if enabled
     if( aah_parameters.Enable_Waypoints>0.5f) {
-        ground_course_desired=Straight_Line( Waypoint, WayPoint_Index );
+
+        //If Waypoint_Diff is between .5 and 1.5, fly the simple ground course
+        ground_course_desired=Straight_Line( Waypoint, &WayPoint_Index ); //Important that Waypoint index is passed by value
+
+        //If Waypoint_Diff is low, then the plane will try and follow th eone long straight line
+        if (aah_parameters.Waypoint_Diff<0.5f){
+            ground_course_desired=Straight_Line( Waypoint2, &WayPoint_Index );
+        }
+
+        //Fly the Full Race Course
+        if (aah_parameters.Waypoint_Diff>1.5f){
+            ground_course_desired=Straight_Line( Waypoint3, &WayPoint_Index );
+        }
+
+
     }
 
     if( aah_parameters.Enable_Orbit>0.5f) {

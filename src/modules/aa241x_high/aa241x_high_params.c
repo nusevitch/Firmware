@@ -261,6 +261,11 @@ PARAM_DEFINE_FLOAT(AAH_ENAORBIT, 0.0f);  //Logical, Follow Waypoints or No?
  */
 PARAM_DEFINE_FLOAT(AAH_RUDPROP, 0.0f);  //Logical, Follow Waypoints or No?
 
+/**
+ * @unit none 						(the unit attribute (not required, just helps for sanity))
+ * @group AA241x High Params		(always include this)
+ */
+PARAM_DEFINE_FLOAT(AAH_WAYDIFF, 0.0f);  //Logical, Follow Waypoints or No?
 
 //NATHAN: The @unit none and @group AA241x High Params are necessary despite being in a comment
 // TODO: define custom parameters here
@@ -298,6 +303,7 @@ int aah_parameters_init(struct aah_param_handles *h)
     h-> K_Line_Follow   =param_find("AAH_KLINEG");
     h-> Max_Line_Angle  =param_find("AAH_MAXANG");
     h-> Enable_Waypoints=param_find("AAH_FOLLOWWAY");
+    h-> Waypoint_Diff=param_find("AAH_WAYDIFF"); //Difficult of Waypoint Stuff
     //Parameters for Orbit
     h-> K_Orbit   =param_find("AAH_KORBIT");
     h-> Turn_Radius  =param_find("AAH_ORBITR");
@@ -338,6 +344,7 @@ int aah_parameters_update(const struct aah_param_handles *h, struct aah_params *
     param_get(h->K_Line_Follow, &(p->K_Line_Follow));
     param_get(h->Max_Line_Angle, &(p->Max_Line_Angle));
     param_get(h->Enable_Waypoints, &(p->Enable_Waypoints));
+    param_get(h->Waypoint_Diff, &(p->Waypoint_Diff));
     //Enable Orbit
     param_get(h->K_Orbit, &(p->K_Orbit));
     param_get(h->Turn_Radius, &(p->Turn_Radius));
