@@ -106,9 +106,14 @@ float Waypoint[][2]= {{150.0f, 0.0f },   //Bottom Left
                       {1001.0f, 1001.0f}
                       };    //
 //These waypoints will just be a straight shot out into the lake, will enable us to test line follow
-float Waypoint2[][2]= {{50.0f, 0.0f},
-                       {-100.0f, 100.0f},
-                       {0.0f, -100.0f},
+//float Waypoint2[][2]= {{50.0f, 0.0f},
+//                       {-100.0f, 100.0f},
+//                       {0.0f, -100.0f},
+//                       {1001.0f, 1001.0f},
+//                      };
+//These waypoints will just be a straight shot out into the lake, will enable us to test line follow
+float Waypoint2[][2]= {{50.0f, 150.0f},
+                       {50.0f, -200.0f},
                        {1001.0f, 1001.0f},
                       };
 
@@ -140,14 +145,23 @@ float Turn(float qN, float qE) {
     //qE=Waypoint[WayPoint_Index][2];
    // float d= ((qN-position_N)^2.0f+(qN-position_N)^2.0f)^.5f; // I think we need to use pow for this
     float d= pow(pow(qN-position_N,2.0)+pow(qE-position_E,2.0),0.5);
-    float phi=atan2f(position_E-qE,position_N-qN)+3.14159f/2.0f; //    aah_parameters.K_Orbit
+    float phi=atan2f(position_E-qE,position_N-qN); //    aah_parameters.K_Orbit
+
+    if (phi-ground_course>3.14159f){
+            phi=phi-2.0f*3.14159f;
+    }
+
+    if (phi-ground_course<3.14159f){
+            Xq=phi+2.0f*3.14159f;
+    }
+
+
     float Xc=phi+(3.14159f*0.5f+atanf(aah_parameters.K_Orbit*(d-aah_parameters.Turn_Radius)/aah_parameters.Turn_Radius));
 
     //Adjust for the way Ground Course is measure (-pi,pi]
     if (Xc>3.14159f){
         Xc=Xc-2.0f*3.14159f;
     }
-
 
     return Xc;
 }
@@ -160,12 +174,12 @@ float Straight_Line(float Waypoint[][2], int *WayPoint_Index ){
     //Get Unit Vector from current waypoint to next waypoint
    // qN=Waypoint[WayPoint_Index+1][1]-Waypoint[WayPoint_Index+1][1]; //First Index needs a plus one
    // qE=Waypoint[WayPoint_Index+1][2]-Waypoint[WayPoint_Index+1][2]; //First index needs a plus one
-    qN=Waypoint[*WayPoint_Index+1][1]-Waypoint[*WayPoint_Index][1]; //First Index needs a plus one
-    qE=Waypoint[*WayPoint_Index+1][2]-Waypoint[*WayPoint_Index][2]; //First in
+    qN=Waypoint[*WayPoint_Index+1][0]-Waypoint[*WayPoint_Index][0]; //First Index needs a plus one
+    qE=Waypoint[*WayPoint_Index+1][1]-Waypoint[*WayPoint_Index][1]; //First in
 
     //These values are used for checking if the plane is crossed
-    float pNC=position_N-Waypoint[*WayPoint_Index+1][1]; //Order of these
-    float pEC=position_E-Waypoint[*WayPoint_Index+1][2]; //
+    float pNC=position_N-Waypoint[*WayPoint_Index+1][0]; //Order of these
+    float pEC=position_E-Waypoint[*WayPoint_Index+1][1]; //
 
     //Compute the Dot Product of Q and P to see fi we have crossed the end plane
     if(qN*pNC+qE*pEC>0.0f){
@@ -173,13 +187,24 @@ float Straight_Line(float Waypoint[][2], int *WayPoint_Index ){
         if (Waypoint[*WayPoint_Index+1][1]>1000.0f){   //Reset the waypoints once the end is reached
             *WayPoint_Index=0;
         }
-        qN=Waypoint[*WayPoint_Index+1][1]-Waypoint[*WayPoint_Index][1]; //First Index needs a plus one
-        qE=Waypoint[*WayPoint_Index+1][2]-Waypoint[*WayPoint_Index][2]; //First in
+        qN=Waypoint[*WayPoint_Index+1][0]-Waypoint[*WayPoint_Index][0]; //First Index needs a plus one
+        qE=Waypoint[*WayPoint_Index+1][1]-Waypoint[*WayPoint_Index][1]; //First in
     }
+
+    //Need logic to account for angle issue
+
 
     Xq=atan2f(qE,qN); //Desired path (Angle from North)
 
-    epy=-sinf(Xq)*(position_N- Waypoint[*WayPoint_Index][1])+cosf(Xq)*(position_E-Waypoint[*WayPoint_Index][2]);
+    if (Xq-ground_course>3.14159f){
+            Xq=Xq-2.0f*3.14159f;
+    }
+
+    if (Xq-ground_course<3.14159f){
+            Xq=Xq+2.0f*3.14159f;
+    }
+
+    epy=-sinf(Xq)*(position_N- Waypoint[*WayPoint_Index][0])+cosf(Xq)*(position_E-Waypoint[*WayPoint_Index][1]);
     //Compute the Commanded Course Angle
     Xc=Xq-aah_parameters.Max_Line_Angle*2.0f/3.14159f*atanf(aah_parameters.K_Line_Follow*epy);
 
@@ -214,6 +239,7 @@ void flight_control() {
         integral_groundspeed_error=0.0f;
         WayPoint_Index=0;
 
+        //This seems to look right....
         if( aah_parameters.Enable_Orbit>0.5f) {
             qN=aah_parameters.Turn_Radius*cosf(ground_course+3.14159f/2.0f);
             qE=aah_parameters.Turn_Radius*sinf(ground_course+3.14159f/2.0f);
