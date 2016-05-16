@@ -84,6 +84,9 @@ struct aah_params {
     float Max_Line_Angle;
     float Enable_Waypoints;
     float Waypoint_Diff; //Switching Between Different Waypoint Arrays
+    float Angle_Logic;
+    float WPNorth;
+    float WPEast;
     //Turning
     float K_Orbit;
     float Turn_Radius;
@@ -131,6 +134,9 @@ struct aah_param_handles {
     param_t Max_Line_Angle;
     param_t Enable_Waypoints;
     param_t Waypoint_Diff;
+    param_t Angle_Logic;
+    param_t WPNorth;
+    param_t WPEast;
     //Enable Orbit
     param_t K_Orbit;
     param_t Turn_Radius;
