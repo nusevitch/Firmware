@@ -93,25 +93,32 @@ float   Xc=0.0f;
 //                       {1001.0f, 1001.0f},
 //                      };
 
-//Straight Line Due West
-float Waypoint1[][2]= {{50.0f, 150.0f},
-                       {50.0f, 10.0f},
-                       {50.0f, -100.0f  },
-                       {1001.0f, 1001.0f},
-                      };
+//Straight Line
+float Waypoint1[][2]= {{0.0f, 150.0f},
+                     {0.0f, 50.0f},
+                     {0.0f, -150.0f  },
+                     {1001.0f, 1001.0f},
+                    };
 
 //45 Degree Turn
-float Waypoint2[][2]= {{50.0f, 150.0f},
-                       {50.0f, 10.0f},
-                       {200.0f,  -140.0f},
-                       {1001.0f, 1001.0f},
-                      };
+float Waypoint2[][2]= {{0.0f, 150.0f},
+                     {0.0f, 25.0f},
+                     {150.0f,  -125.0f},
+                     {1001.0f, 1001.0f},
+                    };
 //15 Degree Turn
 float Waypoint3[][2]={{0.0f, 150.0f},
-                      {0.0f, 0.0f},
-                      {40.2f,  -150.0f},
-                      {1001.0f, 1001.0f},
-                     };
+                    {0.0f, 25.0f},
+                    {46.9f,  -150.0f},
+                    {1001.0f, 1001.0f},
+                   };
+
+float WaypointCourse[][3]={{0.0f, 0.0f, 0.0f},
+                           {},
+                           {},
+                           {},
+                         }
+
 
 //These Waypoints Fly a simple course, allows for testing switching
 //float Waypoint2[][2]= {{150.0f, 0.0f },   //Bottom Left
