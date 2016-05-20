@@ -112,6 +112,8 @@ float roll_servo_out = 0.0f;
 float pitch_servo_out = 0.0f;
 float yaw_servo_out = 0.0f;
 float throttle_servo_out = 0.0f;
+float flaps_servo_out = 0.0f;
+float aux1_servo_out = 0.0f;
 
 // manual control inputs
 // input for each of the controls from the remote control, ranging from -1..1 except for throttle, which ranges from 0..1
@@ -136,7 +138,21 @@ float yaw_trim = 0.0f;
 uint64_t timestamp = 0; 				// timestamp of microseconds since boot (set at the beginning of loop)
 uint64_t utc_timestamp = 0; 			// GPS UTC timestamp in microseconds
 uint64_t previous_loop_timestamp = 0;	// timestamp of start of previous loop
-float mission_time;						// the mission time in minutes
+// float mission_time;						// the mission time in minutes
+
+// mission stuff
+
+bool in_mission;
+hrt_abstime start_time;
+float current_time;
+float final_time;
+bool mission_failed;
+bool in_turn;
+int32_t turn_num;
+float turn_degrees;
+int32_t num_violations;
+bool in_violation;
+bool out_of_bounds;
 
 
 // data from low priority thread

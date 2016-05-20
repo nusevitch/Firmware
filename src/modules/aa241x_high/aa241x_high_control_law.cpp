@@ -50,6 +50,9 @@
 // needed for variable names
 using namespace aa241x_high;
 
+// define global variables (can be seen by all files in aa241x_high directory unless static keyword used)
+float altitude_desired = 0.0f;
+
 /**
  * Main function in which your code should be written.
  *
@@ -425,6 +428,7 @@ float Dt=(hrt_absolute_time() - previous_loop_timestamp)/1000000.0f; //Compute t
         YawEffort = -1.0f;
         integral_sideslip_error=integral_sideslip_error-(desired_sideslip_angle - sideslip)*Dt; //Anti-Windup
     }
+
 
 
 
