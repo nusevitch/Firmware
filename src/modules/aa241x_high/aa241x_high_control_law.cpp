@@ -117,7 +117,7 @@ float WaypointCourse[][3]={{0.0f, 0.0f, 0.0f},
                            {},
                            {},
                            {},
-                         }
+                         };
 
 
 //These Waypoints Fly a simple course, allows for testing switching
@@ -206,14 +206,9 @@ float Straight_Line(float Waypoint[][2], int *WayPoint_Index ){
         qE=Waypoint[*WayPoint_Index+1][1]-Waypoint[*WayPoint_Index][1]; //First in
     }
 
-    //Need logic to account for angle issue
-
-    Xq=atan2f(qE,qN); //Desired path (Angle from North)
-
     //Compute Xq based on Desired Waypoints
-    //Xq=atan2f(aah_parameters.WPEast-position_E,aah_parameters.WPNorth-position_N);
+    Xq=atan2f(Waypoint[WayPoint_Index][1]-position_E,Waypoint[WayPoint_Index][0]-position_N);
 
-    if (aah_parameters.Angle_Logic >0.5f) {
 
         if (Xq-ground_course>3.14159f){
             Xq=Xq-2.0f*3.14159f;
@@ -222,25 +217,8 @@ float Straight_Line(float Waypoint[][2], int *WayPoint_Index ){
         if (Xq-ground_course<-3.14159f){
             Xq=Xq+2.0f*3.14159f;
         }
-    }
 
-    epy=-sinf(Xq)*(position_N- Waypoint[*WayPoint_Index][0])+cosf(Xq)*(position_E-Waypoint[*WayPoint_Index][1]);
-    //Compute the Commanded Course Angle
-    Xc=Xq-aah_parameters.Max_Line_Angle*2.0f/3.14159f*atanf(aah_parameters.K_Line_Follow*epy);
-
-    //Adjust for the Maximum Angle
-
- if (aah_parameters.Angle_Logic <0.5f) {
-    if (Xc>3.14159f){
-        Xc=Xc-2.0f*3.14159f;
-        }
-
-    if (Xc<-3.14159f){
-        Xc=Xc+2.0f*3.14159f;
-        }
-    }
-
-    return Xc;
+    return Xq;
 }
 
 //  Also need to check to know where to switch waypoints... Need a manager to check and increment Waypoint_Index
@@ -297,6 +275,23 @@ float Dt=(hrt_absolute_time() - previous_loop_timestamp)/1000000.0f; //Compute t
 
     //Get Computed desired Ground Course From Vector Field, if enabled
     if( aah_parameters.Enable_Waypoints>0.5f) {
+
+
+        if (Waypoint3[WayPoint_Index][2]<10.0f){
+             ground_course_desired=Turn( qN, qE );
+             //Increment index if I have turned enough
+             if (0){ //WaypointCourse[WayPoint_Index][2]!=Turn_Number
+                 WayPoint_Index=WayPoint_Index+1;
+             }
+        else
+             ground_course_desired=Straight_Line(WaypointCourse, &WayPoint_Index );
+             //Check to ses if I want to transition
+
+             //New Parameter that is the plane offset
+             if (0){ //Dot Product Between Rotated Vector (PN*UN+PE*UE<10)
+                 WayPoint_Index=WayPoint_Index+1;
+             }
+        }
 
         ground_course_desired=Straight_Line( Waypoint2, &WayPoint_Index );
         //If Waypoint_Diff is between .5 and 1.5, fly the simple ground course
