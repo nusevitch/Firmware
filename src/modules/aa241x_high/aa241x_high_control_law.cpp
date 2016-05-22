@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  *   Copyright (c) 2013, 2014 PX4 Development Team. All rights reserved.
  *
@@ -51,7 +51,6 @@
 using namespace aa241x_high;
 
 // define global variables (can be seen by all files in aa241x_high directory unless static keyword used)
-float altitude_desired = 0.0f;
 
 /**
  * Main function in which your code should be written.
@@ -63,7 +62,9 @@ float altitude_desired = 0.0f;
 
 float my_float_variable = 0.0f;		/**< example float variable */
 float altitude_desired=0.0f;
+float Init_altitude_desired=0.0f;
 float ground_course_desired=0.0f;
+float Init_ground_course_desired=0.0f;
 float desired_sideslip_angle= 0.0f;              //Desired Sideslip Angle
 float groundspeed_desired = 0.0f;
 //Can I declare variables here, or do I also need to put them in the header file?
@@ -79,6 +80,9 @@ float    qN=0.0f;               //North Component of Vectors pointing between wa
 float    qE=0.0f;               //East Component of Vectors Pointing Between Waypoints
 float   Xq=0.0f;
 float   Xc=0.0f;
+float   pN;
+float   pE;
+
 
 
 // Code of how we would implement the racecourse code using
@@ -90,37 +94,37 @@ float   Xc=0.0f;
 //                      };
 
 
-//float Waypoint1[][2]= {{50.0f, 150.0f},
-//                       {50.0f, 100.0f},
-//                       {50.0f, 10.0f  },
-//                       {1001.0f, 1001.0f},
-//                      };
 
 //Straight Line
-float Waypoint1[][2]= {{0.0f, 150.0f},
-                     {0.0f, 50.0f},
-                     {0.0f, -150.0f  },
-                     {1001.0f, 1001.0f},
-                    };
+//float Waypoint1[][2]= {{0.0f, 150.0f},
+//                     {0.0f, 50.0f},
+//                     {0.0f, -150.0f  },
+//                     {1001.0f, 1001.0f},
+//                    };
 
 //45 Degree Turn
-float Waypoint2[][2]= {{0.0f, 150.0f},
-                     {0.0f, 25.0f},
-                     {150.0f,  -125.0f},
-                     {1001.0f, 1001.0f},
-                    };
+//float Waypoint2[][2]= {{0.0f, 150.0f},
+//                     {0.0f, 25.0f},
+//                     {150.0f,  -125.0f},
+//                     {1001.0f, 1001.0f},
+//                    };
 //15 Degree Turn
-float Waypoint3[][2]={{0.0f, 150.0f},
-                    {0.0f, 25.0f},
-                    {46.9f,  -150.0f},
-                    {1001.0f, 1001.0f},
-                   };
+//float Waypoint3[][2]={{0.0f, 150.0f},
+//                    {0.0f, 25.0f},
+//                    {46.9f,  -150.0f},
+//                    {1001.0f, 1001.0f},
+//                   };
 
-float WaypointCourse[][3]={{0.0f, 0.0f, 0.0f},
-                           {},
-                           {},
-                           {},
+float WaypointCourse[][3]={{0.0f, 100.0f, 0.0f},
+                           {58.66f, 5.0f  ,   0.0f},
+                           {50.0f, 0.0f, 1.0f},
+                           {-50.0f, -10.0f, 0.0f},
+                           {0.0f, 100.0f, 0.0f},
+                           {10.0f, 100.0f, 0.0f},
                          };
+
+//This array is to help know when to increment turns
+int OurTurnNum[]={0, 0, 1, 0, 2, 0, 0};
 
 
 //These Waypoints Fly a simple course, allows for testing switching
@@ -144,9 +148,10 @@ float WaypointCourse[][3]={{0.0f, 0.0f, 0.0f},
 //                      {1001.0f, 1001.0f},
 //                     };
 
+
 //There are many oddly relevant functions in lib/geo/geo.c
 //waypoint_from_heading_and_distance();
-float Straight_Line(float Waypoint[][2], int *WayPoint_Index);              /* Prototype */
+float Straight_Line(float qN, float qE);              /* Prototype */
 //A function to Follow a Straight Line
 
 float Turn(float qN, float qE);
@@ -185,32 +190,10 @@ float Turn(float qN, float qE) {
 }
 
 
-float Straight_Line(float Waypoint[][2], int *WayPoint_Index ){
-    //rn, re are the North/East Components of a position vector to a point on a line
-    //qn, qe give the orientation of a vector along the line.
-    //Should I store all of this info into a big array of waypoints?  that might be good....
-    //Get Unit Vector from current waypoint to next waypoint
-   // qN=Waypoint[WayPoint_Index+1][1]-Waypoint[WayPoint_Index+1][1]; //First Index needs a plus one
-   // qE=Waypoint[WayPoint_Index+1][2]-Waypoint[WayPoint_Index+1][2]; //First index needs a plus one
-    qN=Waypoint[*WayPoint_Index+1][0]-Waypoint[*WayPoint_Index][0]; //First Index needs a plus one
-    qE=Waypoint[*WayPoint_Index+1][1]-Waypoint[*WayPoint_Index][1]; //First in
+float Straight_Line(float qN, float qE){
 
-    //These values are used for checking if the plane is crossed
-    float pNC=position_N-Waypoint[*WayPoint_Index+1][0]; //Order of these
-    float pEC=position_E-Waypoint[*WayPoint_Index+1][1]; //
-
-    //Compute the Dot Product of Q and P to see if we have crossed the end plane
-    if(qN*pNC+qE*pEC>0.0f){
-        *WayPoint_Index=*WayPoint_Index+1;
-        if (Waypoint[*WayPoint_Index+1][1]>1000.0f){   //Reset the waypoints once the end is reached
-            *WayPoint_Index=0;
-        }
-        qN=Waypoint[*WayPoint_Index+1][0]-Waypoint[*WayPoint_Index][0]; //First Index needs a plus one
-        qE=Waypoint[*WayPoint_Index+1][1]-Waypoint[*WayPoint_Index][1]; //First in
-    }
-
-    //Compute Xq based on Desired Waypoints
-    Xq=atan2f(Waypoint[WayPoint_Index][1]-position_E,Waypoint[WayPoint_Index][0]-position_N);
+    //Compute Xq based on the desired target point
+    Xq=atan2f(qE-position_E,qN-position_N);
 
 
         if (Xq-ground_course>3.14159f){
@@ -236,8 +219,8 @@ void flight_control() {
         yaw_desired = yaw; 							// yaw_desired already defined in aa241x_high_aux.h
 
         //Inialize these values to their initial state (ie, maintain alltitude and heading
-        altitude_desired = position_D_baro; 		// altitude_desired needs to be declared
-        ground_course_desired = ground_course;    //Desired Course
+        Init_altitude_desired = position_D_baro; 		// altitude_desired needs to be declared
+        Init_ground_course_desired = ground_course;    //Desired Course
         desired_sideslip_angle=0.0f;              //Desired Sideslip Angle
         groundspeed_desired=ground_speed;         //Current Throttle Control based Only on ground speed
         //Can I declare variables here, or do I also need to put them in the header file?
@@ -246,7 +229,6 @@ void flight_control() {
         integral_sideslip_error=0.0f; //Initialize Side Slip Error Hold Loop
         integral_groundspeed_error=0.0f;
         WayPoint_Index=0;
-
         //This seems to look right....
         if( aah_parameters.Enable_Orbit>0.5f) {
             qN=aah_parameters.Turn_Radius*cosf(ground_course+3.14159f/2.0f)+position_N;
@@ -259,6 +241,32 @@ void flight_control() {
 float Dt=(hrt_absolute_time() - previous_loop_timestamp)/1000000.0f; //Compute the loop time, right now assuming 60 Hz, can compute actual time
     // TODO: write all of your flight control here...
 
+
+
+      ground_course_desired=Init_ground_course_desired+aah_parameters.Step_Course;
+      altitude_desired=Init_altitude_desired+aah_parameters.Step_Altitude;
+
+//    //The following lines should enable us to check a step response
+//    if (abs(aah_parameters.Step_Altitude-Old_Step_Altitude)>0.5f){
+//        altitude_desired=altitude_desired+aah_parameters.Step_Altitude;
+//    }
+
+//    if (abs(aah_parameters.Step_Course-Old_Step_Course)>0.5f){
+//        ground_course_desired=ground_course_desired+aah_parameters.Step_Course;
+
+//        //Some Logic to ensure that the desired groundcourse remains feasible.
+//        if (ground_course_desired>3.14159f){
+//            ground_course_desired=ground_course_desired-2.0f*3.14159f;
+//        }
+
+//        if (ground_course_desired<-3.14159f){
+//            ground_course_desired=ground_course_desired+2.0f*3.14159f;
+//        }
+
+//    }
+//    //Store the Old Value so that I can see if it checked
+//    Old_Step_Altitude=aah_parameters.Step_Altitude;
+//    Old_Step_Course=aah_parameters.Step_Course;
 
     // getting low data value example
     // float my_low_data = low_data.variable_name1;
@@ -279,39 +287,54 @@ float Dt=(hrt_absolute_time() - previous_loop_timestamp)/1000000.0f; //Compute t
     //Get Computed desired Ground Course From Vector Field, if enabled
     if( aah_parameters.Enable_Waypoints>0.5f) {
 
+        if (WayPoint_Index==0){
+            //If we've crossed the line, INcrement the Counter
+            if (turn_num==0){
+                WayPoint_Index=WayPoint_Index+1;  //Increment Waypoint INdex if we've crossed the starting line
+            }
+            //Go to the First Waypoint
+            qN=WaypointCourse[0][0];
+            qE=WaypointCourse[0][1];
+            ground_course_desired=Straight_Line( qN, qE );
 
-        if (Waypoint3[WayPoint_Index][2]<10.0f){
-             ground_course_desired=Turn( qN, qE );
-             //Increment index if I have turned enough
-             if (0){ //WaypointCourse[WayPoint_Index][2]!=Turn_Number
-                 WayPoint_Index=WayPoint_Index+1;
-             }
-        else
-             ground_course_desired=Straight_Line(WaypointCourse, &WayPoint_Index );
-             //Check to ses if I want to transition
+        } else {  //This Conditional Covers all points except the first one
+            if (WaypointCourse[WayPoint_Index][2]<0.5f) {
+                //Perform the Straight Line Stuff
+                qN=WaypointCourse[WayPoint_Index][0];
+                qE=WaypointCourse[WayPoint_Index][1];
+                ground_course_desired=Straight_Line( qN, qE );
 
-             //New Parameter that is the plane offset
-             if (0){ //Dot Product Between Rotated Vector (PN*UN+PE*UE<10)
-                 WayPoint_Index=WayPoint_Index+1;
-             }
+                //Check and see if I need to increment
+                    //Compute the Vector from the Waypoint to the Current Position
+                    pN=WaypointCourse[WayPoint_Index][0]-position_N;
+                    pE=WaypointCourse[WayPoint_Index][1]-position_E;
+                    //Compute the outward Normal For Comparison
+                    //These Lines Compute the Vector and Rotate it by a positive 90 all at once, to
+                    // Avoid redefining variables
+                    float PEout=(WaypointCourse[WayPoint_Index][0]- WaypointCourse[WayPoint_Index+1][0])/aah_parameters.Course_Radius;
+                    float PNout=-(WaypointCourse[WayPoint_Index][1]- WaypointCourse[WayPoint_Index+1][1])/aah_parameters.Course_Radius;
+                    //Parameters to Include R, D
+
+                //D is a distance Parameter that shows how far the offset plane is
+                if (PNout*pN+PEout*pE> aah_parameters.Course_Offset) {
+                    WayPoint_Index=WayPoint_Index+1; //Increment the INdex if we havecrossed the plane
+                }
+
+            } else {
+                //Enter Turning Mode
+               //Get the Coordinates of the Turn Center
+                qN=WaypointCourse[WayPoint_Index][0];
+                qE=WaypointCourse[WayPoint_Index][1];
+                ground_course_desired=Turn(qN, qE);
+
+                //A conditional to Increment the Index
+                // If we've completed the turn, increment the index
+                if (turn_num==OurTurnNum[WayPoint_Index]){
+                    WayPoint_Index=WayPoint_Index+1;
+                }
+            }
         }
-
-        ground_course_desired=Straight_Line( Waypoint2, &WayPoint_Index );
-        //If Waypoint_Diff is between .5 and 1.5, fly the simple ground course
-        //Important that Waypoint index is passed by value
-
-        //If Waypoint_Diff is low, then the plane will try and follow th eone long straight line
-        if (aah_parameters.Waypoint_Diff<0.5f){
-                  ground_course_desired=Straight_Line( Waypoint1, &WayPoint_Index );
-        }
-
-        //Fly the Full Race Course
-        if (aah_parameters.Waypoint_Diff>1.5f){
-            ground_course_desired=Straight_Line( Waypoint3, &WayPoint_Index );
-        }
-
-
-    }
+    }       //End of Enable Waypoints Parameter
 
     if( aah_parameters.Enable_Orbit>0.5f) {
         ground_course_desired=Turn( qN, qE );  //Command a turn, right now should work
@@ -468,12 +491,20 @@ float Dt=(hrt_absolute_time() - previous_loop_timestamp)/1000000.0f; //Compute t
     }
 
     //Set Throttle Outputs
-    if (aah_parameters.man_throt>0.5f){
-        throttle_servo_out = man_throttle_in;
-    } else {
-        throttle_servo_out= throttle_effort; //throttle_effort;
-    }
+    if (aah_parameters.race_throt<0.5f)  {
+        if (aah_parameters.man_throt>0.5f){
+            throttle_servo_out = man_throttle_in;
+        } else {
+            throttle_servo_out= throttle_effort; //throttle_effort;
+        }
+    } else {  //If race_throt is high, then I will execute these parameters
+        if (WaypointCourse[WayPoint_Index][2]<0.5f){
+            throttle_servo_out = aah_parameters.Course_Straight_Throttle;
+        } else {
+            throttle_servo_out = aah_parameters.Course_Turn_Throttle;
+        }
 
+    }
 
 
 

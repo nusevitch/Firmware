@@ -93,6 +93,18 @@ struct aah_params {
     float Enable_Orbit;
     //Enable Gearing of Rudder
     float Rudder_Prop;
+    //Parameters that enable completion of the racecourse
+    float Course_Radius;
+    float Course_Offset;
+    float race_throt;
+    float Course_Straight_Throttle;
+    float Course_Turn_Throttle;
+    //Parameters that Enable Step Tuning
+    float Step_Altitude;
+    float Step_Course;
+
+
+
     // TODO: add custom parameter variable names here......
 
 };
@@ -143,6 +155,15 @@ struct aah_param_handles {
     param_t Enable_Orbit;
     //Enable Gearing
     param_t Rudder_Prop;
+    //Enable Flying the Course
+    param_t Course_Radius;
+    param_t Course_Offset;
+    param_t Course_Straight_Throttle;
+    param_t Course_Turn_Throttle;
+    //Parameters that Enable Step Tuning
+    param_t Step_Altitude;
+    param_t Step_Course;
+    param_t race_throt; //Enables throttle to enter or leave race mode
 };
 
 /**

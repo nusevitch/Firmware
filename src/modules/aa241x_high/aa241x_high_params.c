@@ -223,18 +223,6 @@ PARAM_DEFINE_FLOAT(AAH_MANRUD, 0.0f);
  * @unit none 						(the unit attribute (not required, just helps for sanity))
  * @group AA241x High Params		(always include this)
  */
-PARAM_DEFINE_FLOAT(AAH_KLINEG, 0.1f);
-
-/**
- * @unit none 						(the unit attribute (not required, just helps for sanity))
- * @group AA241x High Params		(always include this)
- */
-PARAM_DEFINE_FLOAT(AAH_MAXANG, 1.57f);  //Initialized to be pi/2
-
-/**
- * @unit none 						(the unit attribute (not required, just helps for sanity))
- * @group AA241x High Params		(always include this)
- */
 PARAM_DEFINE_FLOAT(AAH_FOLLOWWAY, 0.0f);  //Logical, Follow Waypoints or No?
 
 /**
@@ -265,12 +253,6 @@ PARAM_DEFINE_FLOAT(AAH_RUDPROP, 0.0f);  //Logical, Follow Waypoints or No?
  * @unit none 						(the unit attribute (not required, just helps for sanity))
  * @group AA241x High Params		(always include this)
  */
-PARAM_DEFINE_FLOAT(AAH_WAYDIFF, 0.0f);  //Logical, Follow Waypoints or No?
-
-/**
- * @unit none 						(the unit attribute (not required, just helps for sanity))
- * @group AA241x High Params		(always include this)
- */
 PARAM_DEFINE_FLOAT(AAH_ANGLOG, 0.0f);  //Logical, Follow Waypoints or No?
 
 /**
@@ -284,6 +266,48 @@ PARAM_DEFINE_FLOAT(AAH_WPNORTH, 0.0f);  //Logical, Follow Waypoints or No?
  * @group AA241x High Params		(always include this)
  */
 PARAM_DEFINE_FLOAT(AAH_WPEAST, 0.0f);  //Logical, Follow Waypoints or No?
+
+/**
+ * @unit none 						(the unit attribute (not required, just helps for sanity))
+ * @group AA241x High Params		(always include this)
+ */
+PARAM_DEFINE_FLOAT(AAH_CRADIUS, 0.0f);  //Logical, Follow Waypoints or No?
+
+/**
+ * @unit none 						(the unit attribute (not required, just helps for sanity))
+ * @group AA241x High Params		(always include this)
+ */
+PARAM_DEFINE_FLOAT(AAH_COFFSET, 0.0f);  //Logical, Follow Waypoints or No?
+
+/**
+ * @unit none 						(the unit attribute (not required, just helps for sanity))
+ * @group AA241x High Params		(always include this)
+ */
+PARAM_DEFINE_FLOAT(AAH_CSTRATHROT, 0.0f);  //Logical, Follow Waypoints or No?
+
+/**
+ * @unit none 						(the unit attribute (not required, just helps for sanity))
+ * @group AA241x High Params		(always include this)
+ */
+PARAM_DEFINE_FLOAT(AAH_CTURNTHROT, 0.0f);  //Logical, Follow Waypoints or No?
+
+/**
+ * @unit none 						(the unit attribute (not required, just helps for sanity))
+ * @group AA241x High Params		(always include this)
+ */
+PARAM_DEFINE_FLOAT(AAH_STEPALT, 0.0f);  //Logical, Follow Waypoints or No?
+
+/**
+ * @unit none 						(the unit attribute (not required, just helps for sanity))
+ * @group AA241x High Params		(always include this)
+ */
+PARAM_DEFINE_FLOAT(AAH_STEPCOURSE, 0.0f);  //Logical, Follow Waypoints or No?
+
+/**
+ * @unit none 						(the unit attribute (not required, just helps for sanity))
+ * @group AA241x High Params		(always include this)
+ */
+PARAM_DEFINE_FLOAT(AAH_CTHROT, 0.0f);  //Logical, Follow Waypoints or No?v
 
 
 //NATHAN: The @unit none and @group AA241x High Params are necessary despite being in a comment
@@ -319,10 +343,7 @@ int aah_parameters_init(struct aah_param_handles *h)
     h->man_roll       = param_find("AAH_MANROLL");
     h->man_rudder       = param_find("AAH_MANRUD");
     //Parameters for Line Following
-    h-> K_Line_Follow   =param_find("AAH_KLINEG");
-    h-> Max_Line_Angle  =param_find("AAH_MAXANG");
     h-> Enable_Waypoints=param_find("AAH_FOLLOWWAY");
-    h-> Waypoint_Diff=param_find("AAH_WAYDIFF"); //Difficult of Waypoint Stuff
     h-> Angle_Logic = param_find("AAH_ANGLOG");
     h-> WPNorth= param_find("AAH_WPNORTH");
     h-> WPEast= param_find("AAH_WPEAST");
@@ -330,8 +351,17 @@ int aah_parameters_init(struct aah_param_handles *h)
     h-> K_Orbit   =param_find("AAH_KORBIT");
     h-> Turn_Radius  =param_find("AAH_ORBITR");
     h-> Enable_Orbit=param_find("AAH_ENAORBIT");
-
     h-> Rudder_Prop=param_find("AAH_RUDPROP");
+
+    //Enable Flying the Course
+    h-> Course_Radius=param_find("AAH_CRADIUS");
+    h-> Course_Offset=param_find("AAH_COFFSET");
+    h-> Course_Straight_Throttle=param_find("AAH_CSTRATHROT");
+    h-> Course_Turn_Throttle=param_find("AAH_CTURNTHROT");
+    //Parameters that Enable Step Tuning
+    h-> Step_Altitude=param_find("AAH_STEPALT");
+    h-> Step_Course=param_find("AAH_STEPCOURSE");
+    h-> race_throt=param_find("AAH_CTHROT");
 
     // TODO: add the above line for each of your custom parameters........
 
@@ -377,7 +407,15 @@ int aah_parameters_update(const struct aah_param_handles *h, struct aah_params *
     param_get(h->Enable_Orbit, &(p->Enable_Orbit));
     //Enable the Gearing
     param_get(h->Rudder_Prop, &(p->Rudder_Prop));
-
+    //Enable Flying the Course
+    param_get(h->Course_Radius, &(p->Course_Radius));
+    param_get(h->Course_Offset, &(p->Course_Offset));
+    param_get(h->Course_Straight_Throttle, &(p->Course_Straight_Throttle));
+    param_get(h->Course_Turn_Throttle, &(p->Course_Turn_Throttle));
+    //Parameters that Enable Step Tuning
+    param_get(h->Step_Altitude, &(p->Step_Altitude));
+    param_get(h->Step_Course, &(p->Step_Course));
+    param_get(h->race_throt, &(p->race_throt));
 
     return OK;
 }
