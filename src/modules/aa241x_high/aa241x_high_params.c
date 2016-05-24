@@ -309,6 +309,13 @@ PARAM_DEFINE_FLOAT(AAH_STEPCOURSE, 0.0f);  //Logical, Follow Waypoints or No?
  */
 PARAM_DEFINE_FLOAT(AAH_CTHROT, 0.0f);  //Logical, Follow Waypoints or No?v
 
+/**
+ * @unit none 						(the unit attribute (not required, just helps for sanity))
+ * @group AA241x High Params		(always include this)
+ */
+PARAM_DEFINE_FLOAT(AAH_MANINC, 0.0f);
+
+
 
 //NATHAN: The @unit none and @group AA241x High Params are necessary despite being in a comment
 // TODO: define custom parameters here
@@ -362,6 +369,8 @@ int aah_parameters_init(struct aah_param_handles *h)
     h-> Step_Altitude=param_find("AAH_STEPALT");
     h-> Step_Course=param_find("AAH_STEPCOURSE");
     h-> race_throt=param_find("AAH_CTHROT");
+    h-> Manual_Inc=param_find("AAH_MANINC");
+
 
     // TODO: add the above line for each of your custom parameters........
 
@@ -416,6 +425,7 @@ int aah_parameters_update(const struct aah_param_handles *h, struct aah_params *
     param_get(h->Step_Altitude, &(p->Step_Altitude));
     param_get(h->Step_Course, &(p->Step_Course));
     param_get(h->race_throt, &(p->race_throt));
+    param_get(h->Manual_Inc, & (p->Manual_Inc));
 
     return OK;
 }

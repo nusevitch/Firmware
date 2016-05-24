@@ -102,6 +102,7 @@ struct aah_params {
     //Parameters that Enable Step Tuning
     float Step_Altitude;
     float Step_Course;
+    float Manual_Inc;
 
 
 
@@ -164,6 +165,7 @@ struct aah_param_handles {
     param_t Step_Altitude;
     param_t Step_Course;
     param_t race_throt; //Enables throttle to enter or leave race mode
+    param_t Manual_Inc;
 };
 
 /**

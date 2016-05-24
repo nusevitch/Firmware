@@ -82,6 +82,7 @@ float   Xq=0.0f;
 float   Xc=0.0f;
 float   pN;
 float   pE;
+float Old_Manual_Inc=0.0f;    //Allows for the manual incrementing of Waypoints
 
 
 
@@ -116,9 +117,10 @@ float   pE;
 //                   };
 
 float WaypointCourse[][3]={{0.0f, 100.0f, 0.0f},
-                           {58.66f, 5.0f  ,   0.0f},
-                           {50.0f, 0.0f, 1.0f},
-                           {-50.0f, -10.0f, 0.0f},
+                           {-58.66f, 5.0f  ,   0.0f}, //First one
+                           {-50.0f, 0.0f, 1.0f},
+                           {50.0f, -10.0f, 0.0f},
+                           {50.0f, 0.0f,  1.0f},
                            {0.0f, 100.0f, 0.0f},
                            {10.0f, 100.0f, 0.0f},
                          };
@@ -280,6 +282,20 @@ float Dt=(hrt_absolute_time() - previous_loop_timestamp)/1000000.0f; //Compute t
     // // Make a really simple proportional roll stabilizer // //
     //
 
+    //This probably unwise conditional will allw us to manually increment waypoints
+    if (aah_parameters.Manual_Inc-Old_Manual_Inc>0.5f) {
+        WayPoint_Index=WayPoint_Index+1;
+    }
+
+    if (aah_parameters.Manual_Inc-Old_Manual_Inc<-0.5f) {
+        WayPoint_Index=WayPoint_Index-1;
+        if (WayPoint_Index<-0.5f) {
+            WayPoint_Index=0;
+        }
+    }
+
+Old_Manual_Inc=aah_parameters.Manual_Inc;
+
     //roll_desired = 0.0f; // roll_desired already exists in aa241x_high_aux so no need to repeat float declaration
 
     // Lateral Dyanamics
@@ -311,8 +327,8 @@ float Dt=(hrt_absolute_time() - previous_loop_timestamp)/1000000.0f; //Compute t
                     //Compute the outward Normal For Comparison
                     //These Lines Compute the Vector and Rotate it by a positive 90 all at once, to
                     // Avoid redefining variables
-                    float PEout=(WaypointCourse[WayPoint_Index][0]- WaypointCourse[WayPoint_Index+1][0])/aah_parameters.Course_Radius;
-                    float PNout=-(WaypointCourse[WayPoint_Index][1]- WaypointCourse[WayPoint_Index+1][1])/aah_parameters.Course_Radius;
+                    float PEout=-(WaypointCourse[WayPoint_Index][0]- WaypointCourse[WayPoint_Index+1][0])/aah_parameters.Course_Radius;
+                    float PNout=(WaypointCourse[WayPoint_Index][1]- WaypointCourse[WayPoint_Index+1][1])/aah_parameters.Course_Radius;
                     //Parameters to Include R, D
 
                 //D is a distance Parameter that shows how far the offset plane is
@@ -335,6 +351,11 @@ float Dt=(hrt_absolute_time() - previous_loop_timestamp)/1000000.0f; //Compute t
             }
         }
     }       //End of Enable Waypoints Parameter
+
+    //Set index back to 0 if the limit is reached
+    if (WayPoint_Index==6){
+        WayPoint_Index=0;
+    }
 
     if( aah_parameters.Enable_Orbit>0.5f) {
         ground_course_desired=Turn( qN, qE );  //Command a turn, right now should work
@@ -452,9 +473,6 @@ float Dt=(hrt_absolute_time() - previous_loop_timestamp)/1000000.0f; //Compute t
         integral_sideslip_error=integral_sideslip_error-(desired_sideslip_angle - sideslip)*Dt; //Anti-Windup
     }
 
-
-
-
     // ENSURE THAT YOU SET THE SERVO OUTPUTS!!!
     // outputs should be set to values between -1..1 (except throttle is 0..1)
     // where zero is no actuation, and -1,1 are full throw in either the + or - directions
@@ -498,14 +516,15 @@ float Dt=(hrt_absolute_time() - previous_loop_timestamp)/1000000.0f; //Compute t
             throttle_servo_out= throttle_effort; //throttle_effort;
         }
     } else {  //If race_throt is high, then I will execute these parameters
-        if (WaypointCourse[WayPoint_Index][2]<0.5f){
-            throttle_servo_out = aah_parameters.Course_Straight_Throttle;
-        } else {
-            throttle_servo_out = aah_parameters.Course_Turn_Throttle;
+        if (aah_parameters.Enable_Waypoints>0.5f){
+            if (WaypointCourse[WayPoint_Index][2]<0.5f){
+                throttle_servo_out = aah_parameters.Course_Straight_Throttle;
+            } else {
+                throttle_servo_out = aah_parameters.Course_Turn_Throttle;
+            }
+        } else {//This conditional will be entered if Enable Way is love but race_thot is high
+            throttle_servo_out=aah_parameters.Course_Turn_Throttle;
         }
-
     }
-
-
 
 }
