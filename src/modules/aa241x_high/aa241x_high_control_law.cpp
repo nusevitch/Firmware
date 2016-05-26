@@ -175,7 +175,7 @@ float Turn(float qN, float qE) {
     }
 
     if (phi-ground_course<-3.14159f){
-            Xq=phi+2.0f*3.14159f;
+            phi=phi+2.0f*3.14159f;
     }
 
     float Xc=phi+(3.14159f*0.5f+atanf(aah_parameters.K_Orbit*(d-aah_parameters.Turn_Radius)/aah_parameters.Turn_Radius));
@@ -224,7 +224,7 @@ void flight_control() {
         yaw_desired = yaw; 							// yaw_desired already defined in aa241x_high_aux.h
 
         //Inialize these values to their initial state (ie, maintain alltitude and heading
-        Init_altitude_desired = position_D_baro; 		// altitude_desired needs to be declared
+        Init_altitude_desired = position_D_gps; 		// altitude_desired needs to be declared
         Init_ground_course_desired = ground_course;    //Desired Course
         desired_sideslip_angle=0.0f;              //Desired Sideslip Angle
         groundspeed_desired=ground_speed;         //Current Throttle Control based Only on ground speed
