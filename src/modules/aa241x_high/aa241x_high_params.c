@@ -71,7 +71,7 @@ PARAM_DEFINE_FLOAT(AAH_EXAMPLE, 10.0f);
  * @unit none 						(the unit attribute (not required, just helps for sanity))
  * @group AA241x High Params		(always include this)
  */
-PARAM_DEFINE_FLOAT(AAH_PROPROLLGAIN, 1.0f);
+PARAM_DEFINE_FLOAT(AAH_SPROLLG, 1.0f);
 /**
  * This is an example parameter.  The name of the parameter in QGroundControl
  * will be AAH_PROPROLLGAIN and will be in the AAH dropdown.  Make sure to always
@@ -93,7 +93,7 @@ PARAM_DEFINE_FLOAT(AAH_DROLLG, 0.0f);
  * @unit none 						(the unit attribute (not required, just helps for sanity))
  * @group AA241x High Params		(always include this)
  */
-PARAM_DEFINE_FLOAT(AAH_PPITCHG, 1.0f);
+PARAM_DEFINE_FLOAT(AAH_SPPITCHG, 1.0f);
 /**
  * This is an example parameter.  The name of the parameter in QGroundControl
  * will be AAH_PROPROLLGAIN and will be in the AAH dropdown.  Make sure to always
@@ -115,7 +115,7 @@ PARAM_DEFINE_FLOAT(AAH_DPITCHG, 0.0f);
  * @unit none 						(the unit attribute (not required, just helps for sanity))
  * @group AA241x High Params		(always include this)
  */
-PARAM_DEFINE_FLOAT(AAH_PCOURSEG, 0.0f);
+PARAM_DEFINE_FLOAT(AAH_SPCOURSEG, 0.0f);
 /**
  * This is an example parameter.  The name of the parameter in QGroundControl
  * will be AAH_PROPROLLGAIN and will be in the AAH dropdown.  Make sure to always
@@ -137,7 +137,7 @@ PARAM_DEFINE_FLOAT(AAH_ICOURSEG, 0.0f);
  * @unit none 						(the unit attribute (not required, just helps for sanity))
  * @group AA241x High Params		(always include this)
  */
-PARAM_DEFINE_FLOAT(AAH_PALTITUDEG, 0.0f);
+PARAM_DEFINE_FLOAT(AAH_SPALTITUDEG, 0.0f);
 /**
  * This is an example parameter.  The name of the parameter in QGroundControl
  * will be AAH_PROPROLLGAIN and will be in the AAH dropdown.  Make sure to always
@@ -243,11 +243,22 @@ PARAM_DEFINE_FLOAT(AAH_ORBITR, 0.0f);  //Logical, Follow Waypoints or No?
  */
 PARAM_DEFINE_FLOAT(AAH_ENAORBIT, 0.0f);  //Logical, Follow Waypoints or No?
 
+
+
 /**
  * @unit none 						(the unit attribute (not required, just helps for sanity))
  * @group AA241x High Params		(always include this)
  */
-PARAM_DEFINE_FLOAT(AAH_RUDPROP, 0.0f);  //Logical, Follow Waypoints or No?
+PARAM_DEFINE_FLOAT(AAH_TRUDPROP, 0.0f);  //Logical, Follow Waypoints or No?
+
+/**
+ * @unit none 						(the unit attribute (not required, just helps for sanity))
+ * @group AA241x High Params		(always include this)
+ */
+PARAM_DEFINE_FLOAT(AAH_SRUDPROP, 0.0f);  //Logical, Follow Waypoints or No?
+
+
+
 
 /**
  * @unit none 						(the unit attribute (not required, just helps for sanity))
@@ -307,7 +318,13 @@ PARAM_DEFINE_FLOAT(AAH_STEPCOURSE, 0.0f);  //Logical, Follow Waypoints or No?
  * @unit none 						(the unit attribute (not required, just helps for sanity))
  * @group AA241x High Params		(always include this)
  */
-PARAM_DEFINE_FLOAT(AAH_CTHROT, 0.0f);  //Logical, Follow Waypoints or No?v
+PARAM_DEFINE_FLOAT(AAH_SCTHROT, 0.0f);  //Logical, Follow Waypoints or No?v
+
+/**
+ * @unit none 						(the unit attribute (not required, just helps for sanity))
+ * @group AA241x High Params		(always include this)
+ */
+PARAM_DEFINE_FLOAT(AAH_TCTHROT, 0.0f);
 
 /**
  * @unit none 						(the unit attribute (not required, just helps for sanity))
@@ -315,7 +332,42 @@ PARAM_DEFINE_FLOAT(AAH_CTHROT, 0.0f);  //Logical, Follow Waypoints or No?v
  */
 PARAM_DEFINE_FLOAT(AAH_MANINC, 0.0f);
 
+//Turning Parameters
+/**
+ * @unit none 						(the unit attribute (not required, just helps for sanity))
+ * @group AA241x High Params		(always include this)
+ */
+PARAM_DEFINE_FLOAT(AAH_TPPITCHG, 0.0f);
 
+/**
+ * @unit none 						(the unit attribute (not required, just helps for sanity))
+ * @group AA241x High Params		(always include this)
+ */
+PARAM_DEFINE_FLOAT(AAH_TPALTITUDEG, 0.0f);
+
+/**
+ * @unit none 						(the unit attribute (not required, just helps for sanity))
+ * @group AA241x High Params		(always include this)
+ */
+PARAM_DEFINE_FLOAT(AAH_TPCOURSEG, 0.0f);
+
+/**
+ * @unit none 						(the unit attribute (not required, just helps for sanity))
+ * @group AA241x High Params		(always include this)
+ */
+PARAM_DEFINE_FLOAT(AAH_TPROLLG, 0.0f);
+
+/**
+ * @unit none 						(the unit attribute (not required, just helps for sanity))
+ * @group AA241x High Params		(always include this)
+ */
+PARAM_DEFINE_FLOAT(AAH_MAXROLLA, 0.0f);
+
+/**
+* @unit none 						(the unit attribute (not required, just helps for sanity))
+* @group AA241x High Params		(always include this)
+*/
+PARAM_DEFINE_FLOAT(AAH_SPEED, 0.0f);
 
 //NATHAN: The @unit none and @group AA241x High Params are necessary despite being in a comment
 // TODO: define custom parameters here
@@ -332,18 +384,23 @@ int aah_parameters_init(struct aah_param_handles *h)
      * in the above PARAM_DEFINE_FLOAT
      */
     h->example_high_param           = param_find("AAH_EXAMPLE");
-    h->proportional_roll_gain       = param_find("AAH_PROPROLLGAIN");
+    h->S_proportional_roll_gain       = param_find("AAH_SPROLLG");
     h->derivative_roll_gain         = param_find("AAH_DROLLG");
-    h->proportional_pitch_gain      = param_find("AAH_PPITCHG");
+    h->S_proportional_pitch_gain      = param_find("AAH_SPPITCHG");
     h->derivative_pitch_gain        = param_find("AAH_DPITCHG");
-    h->proportional_course_gain     = param_find("AAH_PCOURSEG");
+    h->S_proportional_course_gain     = param_find("AAH_SPCOURSEG");
     h->integral_course_gain         = param_find("AAH_ICOURSEG");
-    h->proportional_altitude_gain   = param_find("AAH_PALTITUDEG");
+    h->S_proportional_altitude_gain   = param_find("AAH_SPALTITUDEG");
     h->integral_altitude_gain       = param_find("AAH_IALTITUDEG");
     h->proportional_sideslip_gain   = param_find("AAH_PSIDESLIPG");
     h->integral_sideslip_gain       = param_find("AAH_ISIDESLIPG");
     h->proportional_throttle_gain   = param_find("AAH_PTHROTTLEG");
     h->integral_throttle_gain       = param_find("AAH_ITHROTTLEG");
+    //Seperate Turning Gains
+    h-> T_proportional_pitch_gain   = param_find("AAH_TPPITCHG");
+    h-> T_proportional_altitude_gain= param_find("AAH_TPALTITUDEG");
+    h-> T_proportional_roll_gain    = param_find("AAH_TPROLLG");
+    h-> T_proportional_course_gain  = param_find("AAH_TPCOURSEG");
     //Parameters to Enable Partial Manual Control
     h->man_throt       = param_find("AAH_MANTHROT");
     h->man_pitch      = param_find("AAH_MANPITCH");
@@ -358,8 +415,8 @@ int aah_parameters_init(struct aah_param_handles *h)
     h-> K_Orbit   =param_find("AAH_KORBIT");
     h-> Turn_Radius  =param_find("AAH_ORBITR");
     h-> Enable_Orbit=param_find("AAH_ENAORBIT");
-    h-> Rudder_Prop=param_find("AAH_RUDPROP");
-
+    h-> T_Rudder_Prop=param_find("AAH_TRUDPROP");
+    h-> S_Rudder_Prop=param_find("AAH_SRUDPROP");
     //Enable Flying the Course
     h-> Course_Radius=param_find("AAH_CRADIUS");
     h-> Course_Offset=param_find("AAH_COFFSET");
@@ -368,8 +425,12 @@ int aah_parameters_init(struct aah_param_handles *h)
     //Parameters that Enable Step Tuning
     h-> Step_Altitude=param_find("AAH_STEPALT");
     h-> Step_Course=param_find("AAH_STEPCOURSE");
-    h-> race_throt=param_find("AAH_CTHROT");
+    h-> S_race_throt=param_find("AAH_SCTHROT");
+    h-> T_race_throt=param_find("AAH_TCTHROT");
     h-> Manual_Inc=param_find("AAH_MANINC");
+    h-> Max_Roll_Angle=param_find("AAH_MAXROLLA");
+    //
+    h-> Desired_Speed=param_find("AAH_SPEED");
 
 
     // TODO: add the above line for each of your custom parameters........
@@ -383,19 +444,24 @@ int aah_parameters_update(const struct aah_param_handles *h, struct aah_params *
     // for each of your custom parameters, make sure to add this line with
     // the corresponding variable name
     param_get(h->example_high_param, &(p->example_high_param));
-    param_get(h->proportional_roll_gain, &(p->proportional_roll_gain));
+    param_get(h->S_proportional_roll_gain, &(p->S_proportional_roll_gain));
     // TODO: add the above line for each of your custom parameters.....
     param_get(h->derivative_roll_gain, &(p->derivative_roll_gain));
-    param_get(h->proportional_pitch_gain, &(p->proportional_pitch_gain));
+    param_get(h->S_proportional_pitch_gain, &(p->S_proportional_pitch_gain));
     param_get(h->derivative_pitch_gain, &(p->derivative_pitch_gain));
-    param_get(h->proportional_course_gain, &(p->proportional_course_gain));
+    param_get(h->S_proportional_course_gain, &(p->S_proportional_course_gain));
     param_get(h->integral_course_gain, &(p->integral_course_gain));
-    param_get(h->proportional_altitude_gain, &(p->proportional_altitude_gain));
+    param_get(h->S_proportional_altitude_gain, &(p->S_proportional_altitude_gain));
     param_get(h->integral_altitude_gain, &(p->integral_altitude_gain));
     param_get(h->proportional_sideslip_gain, &(p->proportional_sideslip_gain));
     param_get(h->integral_sideslip_gain, &(p->integral_sideslip_gain));
     param_get(h->proportional_throttle_gain, &(p->proportional_throttle_gain));
     param_get(h->integral_throttle_gain, &(p->integral_throttle_gain));
+    // Enable the Turning Parameters
+    param_get(h->T_proportional_pitch_gain, &(p->T_proportional_pitch_gain));
+    param_get(h->T_proportional_course_gain, &(p->T_proportional_course_gain));
+    param_get(h->T_proportional_altitude_gain, &(p->T_proportional_altitude_gain));
+    param_get(h->T_proportional_roll_gain, &(p->T_proportional_roll_gain));
         //Enable Manual Flight
     param_get(h->man_throt, &(p->man_throt));
     param_get(h->man_pitch, &(p->man_pitch));
@@ -415,7 +481,8 @@ int aah_parameters_update(const struct aah_param_handles *h, struct aah_params *
     param_get(h->Turn_Radius, &(p->Turn_Radius));
     param_get(h->Enable_Orbit, &(p->Enable_Orbit));
     //Enable the Gearing
-    param_get(h->Rudder_Prop, &(p->Rudder_Prop));
+    param_get(h->T_Rudder_Prop, &(p->T_Rudder_Prop));
+    param_get(h->S_Rudder_Prop, &(p->S_Rudder_Prop));
     //Enable Flying the Course
     param_get(h->Course_Radius, &(p->Course_Radius));
     param_get(h->Course_Offset, &(p->Course_Offset));
@@ -424,8 +491,11 @@ int aah_parameters_update(const struct aah_param_handles *h, struct aah_params *
     //Parameters that Enable Step Tuning
     param_get(h->Step_Altitude, &(p->Step_Altitude));
     param_get(h->Step_Course, &(p->Step_Course));
-    param_get(h->race_throt, &(p->race_throt));
+    param_get(h->S_race_throt, &(p->S_race_throt));
+    param_get(h->T_race_throt, &(p->T_race_throt));
+    //Some Turning/ Debuggin Parameters
     param_get(h->Manual_Inc, & (p->Manual_Inc));
-
+    param_get(h->Max_Roll_Angle, & (p->Max_Roll_Angle));
+    param_get(h->Desired_Speed, & (p->Desired_Speed));
     return OK;
 }

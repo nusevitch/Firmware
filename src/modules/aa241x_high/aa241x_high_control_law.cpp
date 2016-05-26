@@ -72,7 +72,6 @@ float    integral_course_error = 0.0f;  //Initialize the Integral Terms to 0
 float    integral_altitude_error =0.0f; //Initialize Altitude Error
 float    integral_sideslip_error =0.0f; //Initialize Side Slip Error Hold Loop
 float    integral_groundspeed_error= 0.0f;
-float    Max_Roll_Angle=1.0f;  //Maximum roll angle in Radians, Corresponds to 59 degrees
 float    Max_Pitch_Angle=0.5f; //Maximum Pitch Angle in Radians
 int      WayPoint_Index=0;      //Keeps Track of which waypoint to follow
 float    epy=0.0f;              //Lateral Deviance from Desired Line
@@ -83,8 +82,12 @@ float   Xc=0.0f;
 float   pN;
 float   pE;
 float Old_Manual_Inc=0.0f;    //Allows for the manual incrementing of Waypoints
-
-
+float proportional_course_gain;
+float proportional_roll_gain;
+float proportional_altitude_gain;
+float proportional_pitch_gain;
+float TurningMode=0.0f;   //A Variabel that tells me whether or not I;m turning
+float Rudder_Gear=0.0f;//Gearing Parameter for the Rudder
 
 // Code of how we would implement the racecourse code using
 //float RaceCourse[][3]= {{50.0f, 150.0f, 0.0f},  // A zero in the last column is a straight line
@@ -233,11 +236,17 @@ void flight_control() {
         WayPoint_Index=0;
         //This seems to look right....
         if( aah_parameters.Enable_Orbit>0.5f) {
-            qN=aah_parameters.Turn_Radius*cosf(ground_course+3.14159f/2.0f)+position_N;
-            qE=aah_parameters.Turn_Radius*sinf(ground_course+3.14159f/2.0f)+position_E;
+            qN=50.0f;//aah_parameters.Turn_Radius*cosf(ground_course+3.14159f/2.0f)+position_N;
+            qE=50.0f;//aah_parameters.Turn_Radius*sinf(ground_course+3.14159f/2.0f)+position_E;
         }
-
+        TurningMode=0.0f; //Start off using Straight Line Gains
     }
+
+//If AAH_SPEED is assigned a value, then this will force a desired ground speed
+    if (aah_parameters.Desired_Speed>0.5f){
+        groundspeed_desired=aah_parameters.Desired_Speed;
+    }
+
 
     //What units is this in?
 float Dt=(hrt_absolute_time() - previous_loop_timestamp)/1000000.0f; //Compute the loop time, right now assuming 60 Hz, can compute actual time
@@ -248,13 +257,9 @@ float Dt=(hrt_absolute_time() - previous_loop_timestamp)/1000000.0f; //Compute t
       ground_course_desired=Init_ground_course_desired+aah_parameters.Step_Course;
       altitude_desired=Init_altitude_desired+aah_parameters.Step_Altitude;
 
-//    //The following lines should enable us to check a step response
-//    if (abs(aah_parameters.Step_Altitude-Old_Step_Altitude)>0.5f){
-//        altitude_desired=altitude_desired+aah_parameters.Step_Altitude;
-//    }
-
-//    if (abs(aah_parameters.Step_Course-Old_Step_Course)>0.5f){
-//        ground_course_desired=ground_course_desired+aah_parameters.Step_Course;
+      if (in_mission==0){
+          WayPoint_Index=0;
+      }
 
 //        //Some Logic to ensure that the desired groundcourse remains feasible.
 //        if (ground_course_desired>3.14159f){
@@ -264,14 +269,6 @@ float Dt=(hrt_absolute_time() - previous_loop_timestamp)/1000000.0f; //Compute t
 //        if (ground_course_desired<-3.14159f){
 //            ground_course_desired=ground_course_desired+2.0f*3.14159f;
 //        }
-
-//    }
-//    //Store the Old Value so that I can see if it checked
-//    Old_Step_Altitude=aah_parameters.Step_Altitude;
-//    Old_Step_Course=aah_parameters.Step_Course;
-
-    // getting low data value example
-    // float my_low_data = low_data.variable_name1;
 
     // setting high data value example
     high_data.variable_name1 = my_float_variable;
@@ -312,6 +309,7 @@ Old_Manual_Inc=aah_parameters.Manual_Inc;
             qN=WaypointCourse[0][0];
             qE=WaypointCourse[0][1];
             ground_course_desired=Straight_Line( qN, qE );
+            TurningMode=0.0f; //Use Straight Line Gains
 
         } else {  //This Conditional Covers all points except the first one
             if (WaypointCourse[WayPoint_Index][2]<0.5f) {
@@ -319,7 +317,7 @@ Old_Manual_Inc=aah_parameters.Manual_Inc;
                 qN=WaypointCourse[WayPoint_Index][0];
                 qE=WaypointCourse[WayPoint_Index][1];
                 ground_course_desired=Straight_Line( qN, qE );
-
+                TurningMode=0.0f; //Use Straight Line Gains
                 //Check and see if I need to increment
                     //Compute the Vector from the Waypoint to the Current Position
                     pN=WaypointCourse[WayPoint_Index][0]-position_N;
@@ -348,6 +346,7 @@ Old_Manual_Inc=aah_parameters.Manual_Inc;
                 if (turn_num==OurTurnNum[WayPoint_Index]){
                     WayPoint_Index=WayPoint_Index+1;
                 }
+                TurningMode=1.0f; //Use Turning Gains
             }
         }
     }       //End of Enable Waypoints Parameter
@@ -355,16 +354,36 @@ Old_Manual_Inc=aah_parameters.Manual_Inc;
     //Set index back to 0 if the limit is reached
     if (WayPoint_Index==6){
         WayPoint_Index=0;
-    }
+    }   
 
     if( aah_parameters.Enable_Orbit>0.5f) {
         ground_course_desired=Turn( qN, qE );  //Command a turn, right now should work
+        TurningMode=1.0f; //Use Straight Line Gains
     }
+
+
+    //These conditional statements will enable two different sets of gains
+    //between turning and straight flight
+
+    if (TurningMode>0.5f) {
+        proportional_course_gain=aah_parameters.T_proportional_course_gain;
+        proportional_roll_gain=aah_parameters.T_proportional_roll_gain;
+        proportional_altitude_gain=aah_parameters.T_proportional_altitude_gain;
+        proportional_pitch_gain=aah_parameters.T_proportional_pitch_gain;
+        Rudder_Gear=aah_parameters.T_Rudder_Prop;
+    } else {
+        proportional_course_gain=aah_parameters.S_proportional_course_gain;
+        proportional_roll_gain=aah_parameters.S_proportional_roll_gain;
+        proportional_altitude_gain=aah_parameters.S_proportional_altitude_gain;
+        proportional_pitch_gain=aah_parameters.S_proportional_pitch_gain;
+        Rudder_Gear=aah_parameters.S_Rudder_Prop;
+    }
+
 
 
     // Compue the Integral of the Error. Add anti windup here?
     integral_course_error=integral_course_error+(ground_course_desired - ground_course)*Dt;
-    float proportionalCourseCorrection = aah_parameters.proportional_course_gain * (ground_course_desired - ground_course);
+    float proportionalCourseCorrection = proportional_course_gain * (ground_course_desired - ground_course);
     float IntegralCourseCorrection = aah_parameters.integral_course_gain * (integral_course_error);  //how to get Derivative INt
     //float DerivativeCourseCorrection= aah_parameters.integral_course_gain * (ground_course_desired - ground_course);
 
@@ -373,17 +392,17 @@ Old_Manual_Inc=aah_parameters.Manual_Inc;
 
     // Do bounds checking for commanded roll
     //Also add anti-windup
-    if (roll_desired > Max_Roll_Angle) {
-        roll_desired = Max_Roll_Angle;
+    if (roll_desired > aah_parameters.Max_Roll_Angle) {
+        roll_desired = aah_parameters.Max_Roll_Angle;
         integral_course_error=integral_course_error-(ground_course_desired - ground_course)*Dt;
-    } else if ( roll_desired< -Max_Roll_Angle ) {
-        roll_desired = -Max_Roll_Angle;
+    } else if ( roll_desired< -aah_parameters.Max_Roll_Angle ) {
+        roll_desired = -aah_parameters.Max_Roll_Angle;
         integral_course_error=integral_course_error-(ground_course_desired - ground_course)*Dt;
     }
 
 
     // Now use your parameter gain and multiply by the error from desired
-    float proportionalRollCorrection = aah_parameters.proportional_roll_gain * (roll - roll_desired);
+    float proportionalRollCorrection = proportional_roll_gain * (roll - roll_desired);
     float derivativeRollCorrection= aah_parameters.derivative_roll_gain * (roll_rate);
     // Note the use of x.0f, this is important to specify that these are single and not double float values!
 
@@ -394,7 +413,7 @@ Old_Manual_Inc=aah_parameters.Manual_Inc;
 
     // Compute the Integral of the Error. Add anti windup here?
     integral_altitude_error=integral_altitude_error+(altitude_desired - position_D_baro)*Dt;
-    float proportionalAltitudeCorrection = aah_parameters.proportional_altitude_gain * (altitude_desired - position_D_baro);  //Signs need to be switched here?
+    float proportionalAltitudeCorrection = proportional_altitude_gain * (altitude_desired - position_D_baro);  //Signs need to be switched here?
     float IntegralAltitudeCorrection = aah_parameters.integral_altitude_gain * (integral_altitude_error);  //how to get Derivative INt
     //float DerivativeCourseCorrection= aah_parameters.integral_course_gain * (ground_course_desired - ground_course);
 
@@ -413,7 +432,7 @@ Old_Manual_Inc=aah_parameters.Manual_Inc;
         integral_altitude_error=integral_altitude_error-(altitude_desired - position_D_baro)*Dt;
     }
 
-    float proportionalPitchCorrection = aah_parameters.proportional_pitch_gain * (pitch - pitch_desired);
+    float proportionalPitchCorrection = proportional_pitch_gain * (pitch - pitch_desired);
     float derivativePitchCorrection= aah_parameters.derivative_pitch_gain *(pitch_rate);
 
     float PitchEffort=  proportionalPitchCorrection- derivativePitchCorrection;
@@ -505,25 +524,26 @@ Old_Manual_Inc=aah_parameters.Manual_Inc;
     if (aah_parameters.man_rudder>0.5f){
         yaw_servo_out = man_yaw_in;
     } else {
-        yaw_servo_out = roll_servo_out*aah_parameters.Rudder_Prop; //Gear the rudder and Ailerons together
+        yaw_servo_out = roll_servo_out*Rudder_Gear; //Gear the rudder and Ailerons together
     }
 
     //Set Throttle Outputs
-    if (aah_parameters.race_throt<0.5f)  {
-        if (aah_parameters.man_throt>0.5f){
-            throttle_servo_out = man_throttle_in;
-        } else {
-            throttle_servo_out= throttle_effort; //throttle_effort;
-        }
+
+    if (aah_parameters.man_throt>0.5f){
+            throttle_servo_out = man_throttle_in; 
     } else {  //If race_throt is high, then I will execute these parameters
-        if (aah_parameters.Enable_Waypoints>0.5f){
-            if (WaypointCourse[WayPoint_Index][2]<0.5f){
-                throttle_servo_out = aah_parameters.Course_Straight_Throttle;
-            } else {
+        if (TurningMode>0.5f){
+            if (aah_parameters.T_race_throt>0.5f){
                 throttle_servo_out = aah_parameters.Course_Turn_Throttle;
+            } else {
+                throttle_servo_out = throttle_effort;
             }
         } else {//This conditional will be entered if Enable Way is love but race_thot is high
-            throttle_servo_out=aah_parameters.Course_Turn_Throttle;
+            if (aah_parameters.S_race_throt>0.5f){
+                throttle_servo_out = aah_parameters.Course_Straight_Throttle;
+            } else {
+                throttle_servo_out = throttle_effort;
+            }
         }
     }
 
