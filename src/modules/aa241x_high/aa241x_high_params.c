@@ -369,6 +369,11 @@ PARAM_DEFINE_FLOAT(AAH_MAXROLLA, 0.0f);
 */
 PARAM_DEFINE_FLOAT(AAH_SPEED, 0.0f);
 
+/**
+* @unit none 						(the unit attribute (not required, just helps for sanity))
+* @group AA241x High Params		(always include this)
+*/
+PARAM_DEFINE_FLOAT(AAH_CALTITUDE, 0.0f);
 //NATHAN: The @unit none and @group AA241x High Params are necessary despite being in a comment
 // TODO: define custom parameters here
 
@@ -431,7 +436,7 @@ int aah_parameters_init(struct aah_param_handles *h)
     h-> Max_Roll_Angle=param_find("AAH_MAXROLLA");
     //
     h-> Desired_Speed=param_find("AAH_SPEED");
-
+    h-> Desired_Alt=param_find("AAH_CALTITUDE");
 
     // TODO: add the above line for each of your custom parameters........
 
@@ -497,5 +502,6 @@ int aah_parameters_update(const struct aah_param_handles *h, struct aah_params *
     param_get(h->Manual_Inc, & (p->Manual_Inc));
     param_get(h->Max_Roll_Angle, & (p->Max_Roll_Angle));
     param_get(h->Desired_Speed, & (p->Desired_Speed));
+    param_get(h->Desired_Alt, & (p->Desired_Alt));
     return OK;
 }

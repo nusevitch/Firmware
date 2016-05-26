@@ -247,6 +247,11 @@ void flight_control() {
         groundspeed_desired=aah_parameters.Desired_Speed;
     }
 
+//Allows us to command an actual altitude
+    if (aah_parameters.Desired_Alt>0.5f){
+        //Note the minus sign! In q ground input a positive value
+            Init_altitude_desired=-aah_parameters.Desired_Alt;
+    }
 
     //What units is this in?
 float Dt=(hrt_absolute_time() - previous_loop_timestamp)/1000000.0f; //Compute the loop time, right now assuming 60 Hz, can compute actual time
@@ -412,8 +417,8 @@ Old_Manual_Inc=aah_parameters.Manual_Inc;
     // Altitude Hold Loop
 
     // Compute the Integral of the Error. Add anti windup here?
-    integral_altitude_error=integral_altitude_error+(altitude_desired - position_D_baro)*Dt;
-    float proportionalAltitudeCorrection = proportional_altitude_gain * (altitude_desired - position_D_baro);  //Signs need to be switched here?
+    integral_altitude_error=integral_altitude_error+(altitude_desired - position_D_gps)*Dt;
+    float proportionalAltitudeCorrection = proportional_altitude_gain * (altitude_desired - position_D_gps);  //Signs need to be switched here?
     float IntegralAltitudeCorrection = aah_parameters.integral_altitude_gain * (integral_altitude_error);  //how to get Derivative INt
     //float DerivativeCourseCorrection= aah_parameters.integral_course_gain * (ground_course_desired - ground_course);
 
@@ -425,11 +430,11 @@ Old_Manual_Inc=aah_parameters.Manual_Inc;
     if (pitch_desired > Max_Pitch_Angle) {
         pitch_desired = Max_Pitch_Angle;
         //Anti-Windup
-        integral_altitude_error=integral_altitude_error-(altitude_desired - position_D_baro)*Dt;
+        integral_altitude_error=integral_altitude_error-(altitude_desired - position_D_gps)*Dt;
     } else if ( pitch_desired< -Max_Pitch_Angle ) {
         pitch_desired = -Max_Pitch_Angle;
         //More AntiWindup
-        integral_altitude_error=integral_altitude_error-(altitude_desired - position_D_baro)*Dt;
+        integral_altitude_error=integral_altitude_error-(altitude_desired - position_D_gps)*Dt;
     }
 
     float proportionalPitchCorrection = proportional_pitch_gain * (pitch - pitch_desired);

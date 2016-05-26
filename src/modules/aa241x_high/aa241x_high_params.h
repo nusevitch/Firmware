@@ -113,6 +113,7 @@ struct aah_params {
     float Manual_Inc;
     float Max_Roll_Angle;
     float Desired_Speed;
+    float Desired_Alt;
 
     // TODO: add custom parameter variable names here......
 
@@ -184,6 +185,7 @@ struct aah_param_handles {
     param_t S_race_throt;
     param_t T_race_throt;
     param_t Desired_Speed;
+    param_t Desired_Alt;
 };
 
 /**
