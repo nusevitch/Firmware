@@ -103,8 +103,9 @@ struct aah_params {
     //Parameters that enable completion of the racecourse
     float Course_Radius;
     float Course_Offset;
-    float S_race_throt;
-    float T_race_throt;
+    float Trans_race_throt;
+    float S_Constant_Throttle;
+    float T_Constant_Throttle;
     float Course_Straight_Throttle;
     float Course_Turn_Throttle;
     //Parameters that Enable Step Tuning
@@ -114,7 +115,10 @@ struct aah_params {
     float Max_Roll_Angle;
     float Desired_Speed;
     float Desired_Alt;
-
+    //Enable Feed Forward for the Turns
+    float FF_On;
+    float FF_Roll;
+    float FF_Pitch;
     // TODO: add custom parameter variable names here......
 
 };
@@ -174,18 +178,23 @@ struct aah_param_handles {
     //Enable Flying the Course
     param_t Course_Radius;
     param_t Course_Offset;
+    param_t Trans_race_throt;
     param_t Course_Straight_Throttle;
     param_t Course_Turn_Throttle;
     //Parameters that Enable Step Tuning
     param_t Step_Altitude;
     param_t Step_Course;
-    param_t race_throt; //Enables throttle to enter or leave race mode
     param_t Manual_Inc;
     param_t Max_Roll_Angle;
-    param_t S_race_throt;
-    param_t T_race_throt;
+    param_t S_Constant_Throttle;
+    param_t T_Constant_Throttle;
     param_t Desired_Speed;
     param_t Desired_Alt;
+    //Feedforward
+    param_t FF_On;
+    param_t FF_Roll;
+    param_t FF_Pitch;
+
 };
 
 /**

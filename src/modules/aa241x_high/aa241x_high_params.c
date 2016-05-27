@@ -318,13 +318,13 @@ PARAM_DEFINE_FLOAT(AAH_STEPCOURSE, 0.0f);  //Logical, Follow Waypoints or No?
  * @unit none 						(the unit attribute (not required, just helps for sanity))
  * @group AA241x High Params		(always include this)
  */
-PARAM_DEFINE_FLOAT(AAH_SCTHROT, 0.0f);  //Logical, Follow Waypoints or No?v
+PARAM_DEFINE_FLOAT(AAH_SCONTHROT, 0.0f);  //Logical, Follow Waypoints or No?v
 
 /**
  * @unit none 						(the unit attribute (not required, just helps for sanity))
  * @group AA241x High Params		(always include this)
  */
-PARAM_DEFINE_FLOAT(AAH_TCTHROT, 0.0f);
+PARAM_DEFINE_FLOAT(AAH_TCONTHROT, 0.0f);
 
 /**
  * @unit none 						(the unit attribute (not required, just helps for sanity))
@@ -374,8 +374,36 @@ PARAM_DEFINE_FLOAT(AAH_SPEED, 0.0f);
 * @group AA241x High Params		(always include this)
 */
 PARAM_DEFINE_FLOAT(AAH_CALTITUDE, 0.0f);
+
+//Feedforward
+/**
+* @unit none 						(the unit attribute (not required, just helps for sanity))
+* @group AA241x High Params		(always include this)
+*/
+PARAM_DEFINE_FLOAT(AAH_FF_ON, 0.0f);
+
+/**
+* @unit none 						(the unit attribute (not required, just helps for sanity))
+* @group AA241x High Params		(always include this)
+*/
+PARAM_DEFINE_FLOAT(AAH_FF_ROLL, 0.1955f);
+
+/**
+* @unit none 						(the unit attribute (not required, just helps for sanity))
+* @group AA241x High Params		(always include this)
+*/
+PARAM_DEFINE_FLOAT(AAH_FF_PITCH, 0.3227f);
+
+/**
+* @unit none 						(the unit attribute (not required, just helps for sanity))
+* @group AA241x High Params		(always include this)
+*/
+PARAM_DEFINE_FLOAT(AAH_CTRANSTHROT, 0.7f);
+
+
 //NATHAN: The @unit none and @group AA241x High Params are necessary despite being in a comment
 // TODO: define custom parameters here
+
 
 
 int aah_parameters_init(struct aah_param_handles *h)
@@ -425,18 +453,25 @@ int aah_parameters_init(struct aah_param_handles *h)
     //Enable Flying the Course
     h-> Course_Radius=param_find("AAH_CRADIUS");
     h-> Course_Offset=param_find("AAH_COFFSET");
+    h-> Trans_race_throt=param_find("AAH_CTRANSTHROT");
+
+
     h-> Course_Straight_Throttle=param_find("AAH_CSTRATHROT");
     h-> Course_Turn_Throttle=param_find("AAH_CTURNTHROT");
     //Parameters that Enable Step Tuning
     h-> Step_Altitude=param_find("AAH_STEPALT");
     h-> Step_Course=param_find("AAH_STEPCOURSE");
-    h-> S_race_throt=param_find("AAH_SCTHROT");
-    h-> T_race_throt=param_find("AAH_TCTHROT");
+    h-> S_Constant_Throttle=param_find("AAH_SCONTHROT");
+    h-> T_Constant_Throttle=param_find("AAH_TCONTHROT");
     h-> Manual_Inc=param_find("AAH_MANINC");
     h-> Max_Roll_Angle=param_find("AAH_MAXROLLA");
     //
     h-> Desired_Speed=param_find("AAH_SPEED");
     h-> Desired_Alt=param_find("AAH_CALTITUDE");
+    //Feedforward
+    h-> FF_On=param_find("AAH_FF_ON");
+    h-> FF_Roll=param_find("AAH_FF_ROLL");
+    h-> FF_Pitch= param_find("AAH_FF_PITCH");
 
     // TODO: add the above line for each of your custom parameters........
 
@@ -491,17 +526,23 @@ int aah_parameters_update(const struct aah_param_handles *h, struct aah_params *
     //Enable Flying the Course
     param_get(h->Course_Radius, &(p->Course_Radius));
     param_get(h->Course_Offset, &(p->Course_Offset));
+    param_get(h->Trans_race_throt, &(p->Trans_race_throt));
+
     param_get(h->Course_Straight_Throttle, &(p->Course_Straight_Throttle));
     param_get(h->Course_Turn_Throttle, &(p->Course_Turn_Throttle));
     //Parameters that Enable Step Tuning
     param_get(h->Step_Altitude, &(p->Step_Altitude));
     param_get(h->Step_Course, &(p->Step_Course));
-    param_get(h->S_race_throt, &(p->S_race_throt));
-    param_get(h->T_race_throt, &(p->T_race_throt));
+    param_get(h->S_Constant_Throttle, &(p->S_Constant_Throttle));
+    param_get(h->T_Constant_Throttle, &(p->T_Constant_Throttle));
     //Some Turning/ Debuggin Parameters
     param_get(h->Manual_Inc, & (p->Manual_Inc));
     param_get(h->Max_Roll_Angle, & (p->Max_Roll_Angle));
     param_get(h->Desired_Speed, & (p->Desired_Speed));
     param_get(h->Desired_Alt, & (p->Desired_Alt));
+    //Feedforward
+    param_get(h->FF_On, & (p->FF_On));
+    param_get(h->FF_Roll, & (p->FF_Roll));
+    param_get(h->FF_Pitch, & (p->FF_Pitch));
     return OK;
 }

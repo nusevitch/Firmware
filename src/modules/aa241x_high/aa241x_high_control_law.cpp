@@ -88,6 +88,8 @@ float proportional_altitude_gain;
 float proportional_pitch_gain;
 float TurningMode=0.0f;   //A Variabel that tells me whether or not I;m turning
 float Rudder_Gear=0.0f;//Gearing Parameter for the Rudder
+float PNout;
+float PEout;
 
 // Code of how we would implement the racecourse code using
 //float RaceCourse[][3]= {{50.0f, 150.0f, 0.0f},  // A zero in the last column is a straight line
@@ -119,14 +121,28 @@ float Rudder_Gear=0.0f;//Gearing Parameter for the Rudder
 //                    {1001.0f, 1001.0f},
 //                   };
 
-float WaypointCourse[][3]={{0.0f, 100.0f, 0.0f},
-                           {-58.66f, 5.0f  ,   0.0f}, //First one
-                           {-50.0f, 0.0f, 1.0f},
-                           {50.0f, -10.0f, 0.0f},
-                           {50.0f, 0.0f,  1.0f},
-                           {0.0f, 100.0f, 0.0f},
-                           {10.0f, 100.0f, 0.0f},
-                         };
+//float WaypointCourse[][3]={{0.0f, 100.0f, 0.0f},
+//                           {-58.66f, 5.0f, 0.0f},
+//                           {-50.0f, 0.0f, 1.0f},  //First Pylon
+//                           {50.0f, -10.0f, 0.0f},
+//                           {50.0f, 0.0f,  1.0f},  //Second Pylon
+//                           {0.0f, 100.0f, 0.0f},  //Gate
+//                           {10.0f, 100.0f, 0.0f}, //A check conditino that tells us when we have passed the gate
+//                         };
+
+float pi=3.14159f;
+float LegLength=111.8034f;
+float tiltrad=-150*pi/180.0f;
+float SE=100.0f;
+float SN=0.0f;
+
+
+float Pylon1E  = roundf(SE + LegLength*cosf(tiltrad));
+float Pylon1N   = roundf(SN  + LegLength*sinf(tiltrad));
+float Pylon2E  = roundf(Pylon1E + LegLength*cosf(tiltrad-2.0f*pi/3.0f));
+float Pylon2N  = roundf(Pylon1N + LegLength*sinf(tiltrad-2.0f*pi/3.0f));
+
+
 
 //This array is to help know when to increment turns
 int OurTurnNum[]={0, 0, 1, 0, 2, 0, 0};
@@ -240,7 +256,19 @@ void flight_control() {
             qE=50.0f;//aah_parameters.Turn_Radius*sinf(ground_course+3.14159f/2.0f)+position_E;
         }
         TurningMode=0.0f; //Start off using Straight Line Gains
+
+
     }
+
+
+    float WaypointCourse[][3]={{SN, SE, 0.0f  },
+            {Pylon1N+aah_parameters.Course_Radius/LegLength*(Pylon1E-SE), Pylon1E-aah_parameters.Course_Radius/LegLength*(Pylon1N-SN),        0},
+            {Pylon1N, Pylon1E,   1},
+            {Pylon2N+aah_parameters.Course_Radius/LegLength*(Pylon2E-Pylon1E), Pylon2E-aah_parameters.Course_Radius/LegLength*(Pylon2N-Pylon1N),     0},
+            {Pylon2N, Pylon2E,   1},
+            {SN, SE,             0},
+            {SN+aah_parameters.Course_Radius, SE,   0},
+        };
 
 //If AAH_SPEED is assigned a value, then this will force a desired ground speed
     if (aah_parameters.Desired_Speed>0.5f){
@@ -330,12 +358,12 @@ Old_Manual_Inc=aah_parameters.Manual_Inc;
                     //Compute the outward Normal For Comparison
                     //These Lines Compute the Vector and Rotate it by a positive 90 all at once, to
                     // Avoid redefining variables
-                    float PEout=-(WaypointCourse[WayPoint_Index][0]- WaypointCourse[WayPoint_Index+1][0])/aah_parameters.Course_Radius;
-                    float PNout=(WaypointCourse[WayPoint_Index][1]- WaypointCourse[WayPoint_Index+1][1])/aah_parameters.Course_Radius;
+                    PEout=-(WaypointCourse[WayPoint_Index][0]- WaypointCourse[WayPoint_Index+1][0])/aah_parameters.Course_Radius;
+                    PNout=(WaypointCourse[WayPoint_Index][1]- WaypointCourse[WayPoint_Index+1][1])/aah_parameters.Course_Radius;
                     //Parameters to Include R, D
 
                 //D is a distance Parameter that shows how far the offset plane is
-                if (PNout*pN+PEout*pE> aah_parameters.Course_Offset) {
+                if (PNout*pN+PEout*pE>0.0f ) {
                     WayPoint_Index=WayPoint_Index+1; //Increment the INdex if we havecrossed the plane
                 }
 
@@ -515,6 +543,9 @@ Old_Manual_Inc=aah_parameters.Manual_Inc;
     if (aah_parameters.man_roll>0.5f){
         roll_servo_out=man_roll_in; //Is direction correct?
     } else {
+        if (TurningMode>0.5f && aah_parameters.FF_On>0.5f){
+            RollEffort= RollEffort+aah_parameters.FF_Roll;
+        }
         roll_servo_out = RollEffort; //throttle_effort;
     }
 
@@ -522,6 +553,9 @@ Old_Manual_Inc=aah_parameters.Manual_Inc;
     if (aah_parameters.man_pitch>0.5f){
         pitch_servo_out = -man_pitch_in;  //Negative Sign comes from testing, is this the right place to put it?
     } else {
+        if (TurningMode>0.5f && aah_parameters.FF_On>0.5f){
+            PitchEffort= PitchEffort+aah_parameters.FF_Pitch;
+        }
         pitch_servo_out = -PitchEffort; //throttle_effort;  //throttle set to 0 for testing
     }
 
@@ -538,14 +572,18 @@ Old_Manual_Inc=aah_parameters.Manual_Inc;
             throttle_servo_out = man_throttle_in; 
     } else {  //If race_throt is high, then I will execute these parameters
         if (TurningMode>0.5f){
-            if (aah_parameters.T_race_throt>0.5f){
+            if (aah_parameters.T_Constant_Throttle>0.5f){
                 throttle_servo_out = aah_parameters.Course_Turn_Throttle;
             } else {
                 throttle_servo_out = throttle_effort;
             }
         } else {//This conditional will be entered if Enable Way is love but race_thot is high
-            if (aah_parameters.S_race_throt>0.5f){
-                throttle_servo_out = aah_parameters.Course_Straight_Throttle;
+            if (aah_parameters.S_Constant_Throttle>0.5f){
+                if (PNout*pN+PEout*pE>aah_parameters.Course_Offset) {
+                    throttle_servo_out = aah_parameters.Trans_race_throt;
+                } else {
+                    throttle_servo_out = aah_parameters.Course_Straight_Throttle;
+                }
             } else {
                 throttle_servo_out = throttle_effort;
             }
