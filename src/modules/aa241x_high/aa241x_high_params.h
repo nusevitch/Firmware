@@ -93,6 +93,7 @@ struct aah_params {
     float Angle_Logic;
     float WPNorth;
     float WPEast;
+    float Go_to_Way;
     //Turning
     float K_Orbit;
     float Turn_Radius;
@@ -168,6 +169,7 @@ struct aah_param_handles {
     param_t Angle_Logic;
     param_t WPNorth;
     param_t WPEast;
+    param_t Go_to_Way;
     //Enable Orbit
     param_t K_Orbit;
     param_t Turn_Radius;

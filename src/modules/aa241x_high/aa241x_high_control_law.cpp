@@ -260,15 +260,21 @@ void flight_control() {
 
     }
 
-
-    float WaypointCourse[][3]={{SN, SE, 0.0f  },
+float D=20.0f;
+    float WaypointCourse[][3]={
+            {SN, SE, 0.0f  },
             {Pylon1N+aah_parameters.Course_Radius/LegLength*(Pylon1E-SE), Pylon1E-aah_parameters.Course_Radius/LegLength*(Pylon1N-SN),        0},
             {Pylon1N, Pylon1E,   1},
             {Pylon2N+aah_parameters.Course_Radius/LegLength*(Pylon2E-Pylon1E), Pylon2E-aah_parameters.Course_Radius/LegLength*(Pylon2N-Pylon1N),     0},
             {Pylon2N, Pylon2E,   1},
-            {SN, SE,             0},
-            {SN+aah_parameters.Course_Radius, SE,   0},
+            {SN  + D*cosf(-tiltrad+150.0f/180.0f*pi), SE + D*cosf(-tiltrad+150.0f/180.0f*pi),             0},  //These last two lines have not yet been made totally general
+            {SN  + D*cosf(-tiltrad+150.0f/180.0f*pi)+aah_parameters.Course_Radius, SE + D*cosf(-tiltrad+150.0f/180.0f*pi),   0},
         };
+
+    //{SN+10.0f, SE-20.0f,             0},  //These last two lines have not yet been made totally general
+    //{SN+aah_parameters.Course_Radius, SE,   0},
+
+
 
 //If AAH_SPEED is assigned a value, then this will force a desired ground speed
     if (aah_parameters.Desired_Speed>0.5f){
@@ -394,6 +400,10 @@ Old_Manual_Inc=aah_parameters.Manual_Inc;
         TurningMode=1.0f; //Use Straight Line Gains
     }
 
+    if( aah_parameters.Go_to_Way>0.5f) {
+        ground_course_desired=Straight_Line( aah_parameters.WPNorth, aah_parameters.WPEast);
+        TurningMode=0.0f; //Use Straight Line Gains
+    }
 
     //These conditional statements will enable two different sets of gains
     //between turning and straight flight
@@ -488,22 +498,7 @@ Old_Manual_Inc=aah_parameters.Manual_Inc;
 
     //Need to add some Anti-windup logic along with the bounds checking?
 
-    // Do bounds checking to keep the roll correction within the -1..1 limits of the servo output
-    if (RollEffort > 1.0f) {
-        RollEffort = 1.0f;
-        //Is antiwindup needed?  I don't think so, integrator is on ground course, not roll
-        //integral_groundspeed_error=integral_groundspeed_error-(groundspeed_desired - ground_speed)*Dt; //Anti Windup
-    } else if (RollEffort < -1.0f ) {
-        RollEffort = -1.0f;
-        //integral_groundspeed_error=integral_groundspeed_error-(groundspeed_desired - ground_speed)*Dt; //Anti Windup
-    }
 
-    // Do bounds checking to keep the roll correction within the -1..1 limits of the servo output
-    if (PitchEffort > 1.0f) {
-        PitchEffort = 1.0f;
-    } else if (PitchEffort < -1.0f ) {
-        PitchEffort = -1.0f;
-    }
 
     // Do bounds checking to keep the throttle correction within the -1..1 limits of the servo output
     if (throttle_effort > 1.0f) {
@@ -546,8 +541,16 @@ Old_Manual_Inc=aah_parameters.Manual_Inc;
         if (TurningMode>0.5f && aah_parameters.FF_On>0.5f){
             RollEffort= RollEffort+aah_parameters.FF_Roll;
         }
-        roll_servo_out = RollEffort; //throttle_effort;
+        // Do bounds checking to keep the roll correction within the -1..1 limits of the servo output
+            if (RollEffort > 1.0f) {
+                RollEffort = 1.0f;
+            } else if (RollEffort < -1.0f ) {
+                RollEffort = -1.0f;
+            }
+            roll_servo_out = RollEffort; //throttle_effort;
     }
+
+
 
     //Set Pitch Outputs
     if (aah_parameters.man_pitch>0.5f){
@@ -556,14 +559,26 @@ Old_Manual_Inc=aah_parameters.Manual_Inc;
         if (TurningMode>0.5f && aah_parameters.FF_On>0.5f){
             PitchEffort= PitchEffort+aah_parameters.FF_Pitch;
         }
+        // Do bounds checking to keep the roll correction within the -1..1 limits of the servo output
+        if (PitchEffort > 1.0f) {
+            PitchEffort = 1.0f;
+        } else if (PitchEffort < -1.0f ) {
+            PitchEffort = -1.0f;
+        }
         pitch_servo_out = -PitchEffort; //throttle_effort;  //throttle set to 0 for testing
-    }
+    }    
 
     //Set Yaw Outputs
     if (aah_parameters.man_rudder>0.5f){
         yaw_servo_out = man_yaw_in;
     } else {
-        yaw_servo_out = roll_servo_out*Rudder_Gear; //Gear the rudder and Ailerons together
+        float YawEffort= roll_servo_out*Rudder_Gear;
+        if (YawEffort > 1.0f) {
+            YawEffort = 1.0f;
+        } else if (YawEffort < -1.0f ) {
+            YawEffort = -1.0f;
+        }
+        yaw_servo_out = YawEffort; //Gear the rudder and Ailerons together
     }
 
     //Set Throttle Outputs
@@ -577,12 +592,16 @@ Old_Manual_Inc=aah_parameters.Manual_Inc;
             } else {
                 throttle_servo_out = throttle_effort;
             }
-        } else {//This conditional will be entered if Enable Way is love but race_thot is high
+        } else {//This conditional will be entered if Enable Way is low but S_Constant_Throttle is high
             if (aah_parameters.S_Constant_Throttle>0.5f){
-                if (PNout*pN+PEout*pE>aah_parameters.Course_Offset) {
-                    throttle_servo_out = aah_parameters.Trans_race_throt;
-                } else {
+                if (aah_parameters.Go_to_Way>0.5f) {
                     throttle_servo_out = aah_parameters.Course_Straight_Throttle;
+                } else{
+                    if (PNout*pN+PEout*pE>aah_parameters.Course_Offset) {
+                        throttle_servo_out = aah_parameters.Trans_race_throt;
+                    } else {
+                        throttle_servo_out = aah_parameters.Course_Straight_Throttle;
+                    }
                 }
             } else {
                 throttle_servo_out = throttle_effort;

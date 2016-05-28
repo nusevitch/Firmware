@@ -400,6 +400,12 @@ PARAM_DEFINE_FLOAT(AAH_FF_PITCH, 0.3227f);
 */
 PARAM_DEFINE_FLOAT(AAH_CTRANSTHROT, 0.7f);
 
+/**
+* @unit none 						(the unit attribute (not required, just helps for sanity))
+* @group AA241x High Params		(always include this)
+*/
+PARAM_DEFINE_FLOAT(AAH_WPGO_TO_ONE, 0.0f);
+
 
 //NATHAN: The @unit none and @group AA241x High Params are necessary despite being in a comment
 // TODO: define custom parameters here
@@ -444,6 +450,7 @@ int aah_parameters_init(struct aah_param_handles *h)
     h-> Angle_Logic = param_find("AAH_ANGLOG");
     h-> WPNorth= param_find("AAH_WPNORTH");
     h-> WPEast= param_find("AAH_WPEAST");
+    h-> Go_to_Way= param_find("AAH_WPGO_TO_ONE");
     //Parameters for Orbit
     h-> K_Orbit   =param_find("AAH_KORBIT");
     h-> Turn_Radius  =param_find("AAH_ORBITR");
@@ -516,6 +523,7 @@ int aah_parameters_update(const struct aah_param_handles *h, struct aah_params *
 //Allows us to manually set a waypoint to see if we can go towards it
     param_get(h->WPNorth, &(p->WPNorth));
     param_get(h->WPEast, &(p->WPEast));
+    param_get(h->Go_to_Way, &(p->Go_to_Way));
     //Enable Orbit
     param_get(h->K_Orbit, &(p->K_Orbit));
     param_get(h->Turn_Radius, &(p->Turn_Radius));
