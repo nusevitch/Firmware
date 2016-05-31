@@ -260,15 +260,17 @@ void flight_control() {
 
     }
 
-float D=20.0f;
-    float WaypointCourse[][3]={
-            {SN, SE, 0.0f  },
+float D=20.0f;  //HOw far back to move the last waypoint
+
+    float WaypointCourse[][3]={ {SN, SE, 0.0f  },
             {Pylon1N+aah_parameters.Course_Radius/LegLength*(Pylon1E-SE), Pylon1E-aah_parameters.Course_Radius/LegLength*(Pylon1N-SN),        0},
             {Pylon1N, Pylon1E,   1},
             {Pylon2N+aah_parameters.Course_Radius/LegLength*(Pylon2E-Pylon1E), Pylon2E-aah_parameters.Course_Radius/LegLength*(Pylon2N-Pylon1N),     0},
             {Pylon2N, Pylon2E,   1},
-            {SN  + D*cosf(-tiltrad+150.0f/180.0f*pi), SE + D*cosf(-tiltrad+150.0f/180.0f*pi),             0},  //These last two lines have not yet been made totally general
-            {SN  + D*cosf(-tiltrad+150.0f/180.0f*pi)+aah_parameters.Course_Radius, SE + D*cosf(-tiltrad+150.0f/180.0f*pi),   0},
+            {SN, SE,             0},
+            {SN+aah_parameters.Course_Radius, SE,   0},
+            //{SN  + D*cosf(-tiltrad+150.0f/180.0f*pi), SE + D*cosf(-tiltrad+150.0f/180.0f*pi),             0},  //These last two lines have not yet been made totally general
+            //{SN  + D*cosf(-tiltrad+150.0f/180.0f*pi)+aah_parameters.Course_Radius, SE + D*cosf(-tiltrad+150.0f/180.0f*pi),   0},
         };
 
     //{SN+10.0f, SE-20.0f,             0},  //These last two lines have not yet been made totally general
@@ -414,15 +416,13 @@ Old_Manual_Inc=aah_parameters.Manual_Inc;
         proportional_altitude_gain=aah_parameters.T_proportional_altitude_gain;
         proportional_pitch_gain=aah_parameters.T_proportional_pitch_gain;
         Rudder_Gear=aah_parameters.T_Rudder_Prop;
-    } else {
+    } else {   //Straight Gain
         proportional_course_gain=aah_parameters.S_proportional_course_gain;
         proportional_roll_gain=aah_parameters.S_proportional_roll_gain;
         proportional_altitude_gain=aah_parameters.S_proportional_altitude_gain;
         proportional_pitch_gain=aah_parameters.S_proportional_pitch_gain;
         Rudder_Gear=aah_parameters.S_Rudder_Prop;
     }
-
-
 
     // Compue the Integral of the Error. Add anti windup here?
     integral_course_error=integral_course_error+(ground_course_desired - ground_course)*Dt;
@@ -434,15 +434,25 @@ Old_Manual_Inc=aah_parameters.Manual_Inc;
     //roll_rate_desired= 0.0f;//  ??????? How do I get this?
 
     // Do bounds checking for commanded roll
+    //The two different maximum angles, one for turning, the other for straight
     //Also add anti-windup
-    if (roll_desired > aah_parameters.Max_Roll_Angle) {
-        roll_desired = aah_parameters.Max_Roll_Angle;
-        integral_course_error=integral_course_error-(ground_course_desired - ground_course)*Dt;
-    } else if ( roll_desired< -aah_parameters.Max_Roll_Angle ) {
-        roll_desired = -aah_parameters.Max_Roll_Angle;
-        integral_course_error=integral_course_error-(ground_course_desired - ground_course)*Dt;
+    if (TurningMode>0.5f) {
+        if (roll_desired > aah_parameters.Max_Roll_Angle) {
+            roll_desired = aah_parameters.Max_Roll_Angle;
+            integral_course_error=integral_course_error-(ground_course_desired - ground_course)*Dt;
+        } else if ( roll_desired< -aah_parameters.Max_Roll_Angle ) {
+            roll_desired = -aah_parameters.Max_Roll_Angle;
+            integral_course_error=integral_course_error-(ground_course_desired - ground_course)*Dt;
+        }
+    } else {
+        if (roll_desired > aah_parameters.S_Max_Roll_Angle) {
+            roll_desired = aah_parameters.S_Max_Roll_Angle;
+            integral_course_error=integral_course_error-(ground_course_desired - ground_course)*Dt;
+        } else if ( roll_desired< -aah_parameters.S_Max_Roll_Angle ) {
+            roll_desired = -aah_parameters.S_Max_Roll_Angle;
+            integral_course_error=integral_course_error-(ground_course_desired - ground_course)*Dt;
+        }
     }
-
 
     // Now use your parameter gain and multiply by the error from desired
     float proportionalRollCorrection = proportional_roll_gain * (roll - roll_desired);

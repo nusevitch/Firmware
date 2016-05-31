@@ -114,6 +114,7 @@ struct aah_params {
     float Step_Course;
     float Manual_Inc;
     float Max_Roll_Angle;
+    float S_Max_Roll_Angle;
     float Desired_Speed;
     float Desired_Alt;
     //Enable Feed Forward for the Turns
@@ -188,6 +189,7 @@ struct aah_param_handles {
     param_t Step_Course;
     param_t Manual_Inc;
     param_t Max_Roll_Angle;
+    param_t S_Max_Roll_Angle;
     param_t S_Constant_Throttle;
     param_t T_Constant_Throttle;
     param_t Desired_Speed;

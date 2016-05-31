@@ -361,7 +361,14 @@ PARAM_DEFINE_FLOAT(AAH_TPROLLG, 0.0f);
  * @unit none 						(the unit attribute (not required, just helps for sanity))
  * @group AA241x High Params		(always include this)
  */
-PARAM_DEFINE_FLOAT(AAH_MAXROLLA, 0.0f);
+PARAM_DEFINE_FLOAT(AAH_TMAXROLLA, 0.0f);
+
+/**
+ * @unit none 						(the unit attribute (not required, just helps for sanity))
+ * @group AA241x High Params		(always include this)
+ */
+PARAM_DEFINE_FLOAT(AAH_SMAXROLLA, 3.14159f/2.0f);
+
 
 /**
 * @unit none 						(the unit attribute (not required, just helps for sanity))
@@ -471,7 +478,8 @@ int aah_parameters_init(struct aah_param_handles *h)
     h-> S_Constant_Throttle=param_find("AAH_SCONTHROT");
     h-> T_Constant_Throttle=param_find("AAH_TCONTHROT");
     h-> Manual_Inc=param_find("AAH_MANINC");
-    h-> Max_Roll_Angle=param_find("AAH_MAXROLLA");
+    h-> Max_Roll_Angle=param_find("AAH_TMAXROLLA");
+    h-> S_Max_Roll_Angle=param_find("AAH_SMAXROLLA");
     //
     h-> Desired_Speed=param_find("AAH_SPEED");
     h-> Desired_Alt=param_find("AAH_CALTITUDE");
@@ -546,6 +554,7 @@ int aah_parameters_update(const struct aah_param_handles *h, struct aah_params *
     //Some Turning/ Debuggin Parameters
     param_get(h->Manual_Inc, & (p->Manual_Inc));
     param_get(h->Max_Roll_Angle, & (p->Max_Roll_Angle));
+    param_get(h->S_Max_Roll_Angle, & (p->S_Max_Roll_Angle));
     param_get(h->Desired_Speed, & (p->Desired_Speed));
     param_get(h->Desired_Alt, & (p->Desired_Alt));
     //Feedforward
