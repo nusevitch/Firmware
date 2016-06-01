@@ -121,6 +121,7 @@ struct aah_params {
     float FF_On;
     float FF_Roll;
     float FF_Pitch;
+    float S_FF_Pitch;
     // TODO: add custom parameter variable names here......
 
 };
@@ -198,7 +199,7 @@ struct aah_param_handles {
     param_t FF_On;
     param_t FF_Roll;
     param_t FF_Pitch;
-
+    param_t S_FF_Pitch;
 };
 
 /**

@@ -367,7 +367,7 @@ PARAM_DEFINE_FLOAT(AAH_TMAXROLLA, 0.0f);
  * @unit none 						(the unit attribute (not required, just helps for sanity))
  * @group AA241x High Params		(always include this)
  */
-PARAM_DEFINE_FLOAT(AAH_SMAXROLLA, 3.14159f/2.0f);
+PARAM_DEFINE_FLOAT(AAH_SMAXROLLA, 0.5f);
 
 
 /**
@@ -413,6 +413,24 @@ PARAM_DEFINE_FLOAT(AAH_CTRANSTHROT, 0.7f);
 */
 PARAM_DEFINE_FLOAT(AAH_WPGO_TO_ONE, 0.0f);
 
+/**
+* @unit none 						(the unit attribute (not required, just helps for sanity))
+* @group AA241x High Params		(always include this)
+*/
+PARAM_DEFINE_FLOAT(AAH_FF_SPITCH, 0.0f);
+
+/**
+* @unit none 						(the unit attribute (not required, just helps for sanity))
+* @group AA241x High Params		(always include this)
+*/
+PARAM_DEFINE_FLOAT(AAH_KLINE, 0.0f);
+
+
+/**
+* @unit none 						(the unit attribute (not required, just helps for sanity))
+* @group AA241x High Params		(always include this)
+*/
+PARAM_DEFINE_FLOAT(AAH_KANGLE, 0.0f);
 
 //NATHAN: The @unit none and @group AA241x High Params are necessary despite being in a comment
 // TODO: define custom parameters here
@@ -453,6 +471,8 @@ int aah_parameters_init(struct aah_param_handles *h)
     h->man_roll       = param_find("AAH_MANROLL");
     h->man_rudder       = param_find("AAH_MANRUD");
     //Parameters for Line Following
+    h->K_Line_Follow = param_find("AAH_KLINE");
+    h->Max_Line_Angle = param_find("AAH_KANGLE");
     h-> Enable_Waypoints=param_find("AAH_FOLLOWWAY");
     h-> Angle_Logic = param_find("AAH_ANGLOG");
     h-> WPNorth= param_find("AAH_WPNORTH");
@@ -487,6 +507,7 @@ int aah_parameters_init(struct aah_param_handles *h)
     h-> FF_On=param_find("AAH_FF_ON");
     h-> FF_Roll=param_find("AAH_FF_ROLL");
     h-> FF_Pitch= param_find("AAH_FF_PITCH");
+    h-> S_FF_Pitch= param_find("AAH_FF_SPITCH");
 
     // TODO: add the above line for each of your custom parameters........
 
@@ -561,5 +582,9 @@ int aah_parameters_update(const struct aah_param_handles *h, struct aah_params *
     param_get(h->FF_On, & (p->FF_On));
     param_get(h->FF_Roll, & (p->FF_Roll));
     param_get(h->FF_Pitch, & (p->FF_Pitch));
+    param_get(h->S_FF_Pitch, & (p->S_FF_Pitch));
+
+
+
     return OK;
 }

@@ -175,6 +175,34 @@ int OurTurnNum[]={0, 0, 1, 0, 2, 0, 0};
 float Straight_Line(float qN, float qE);              /* Prototype */
 //A function to Follow a Straight Line
 
+// Function Prototype for straight line function
+float Straight_Line_Follow(float pNend, float pEend, float pNstart, float pEstart);
+
+float Straight_Line_Follow(float pNend, float pEend, float pNstart, float pEstart) {
+
+   qN=pNend-pNstart;
+   qE=pEend-pEstart;
+
+   Xq=atan2f(qE,qN); //Desired path (Angle from North)
+
+   //Angle Logic Stuff
+    if (Xq-ground_course>3.14159f){
+            Xq=Xq-2.0f*3.14159f;
+     }
+
+    if (Xq-ground_course<-3.14159f){
+              Xq=Xq+2.0f*3.14159f;
+     }
+
+   epy=-sinf(Xq)*(position_N- pNstart)+cosf(Xq)*(position_E-pEstart);
+
+   //Compute the Commanded Course Angle
+   Xc=Xq-aah_parameters.Max_Line_Angle*2.0f/3.14159f*atanf(aah_parameters.K_Line_Follow*epy);
+
+   return Xc;
+}
+
+
 float Turn(float qN, float qE);
 // Currently this is in a testing configuration, can be changed to waypoints when needed.
 //float Turn(float Waypoint[][2], int &WayPoint_Index){
@@ -260,7 +288,7 @@ void flight_control() {
 
     }
 
-float D=20.0f;  //HOw far back to move the last waypoint
+//float D=20.0f;  //HOw far back to move the last waypoint
 
     float WaypointCourse[][3]={ {SN, SE, 0.0f  },
             {Pylon1N+aah_parameters.Course_Radius/LegLength*(Pylon1E-SE), Pylon1E-aah_parameters.Course_Radius/LegLength*(Pylon1N-SN),        0},
@@ -358,6 +386,13 @@ Old_Manual_Inc=aah_parameters.Manual_Inc;
                 qN=WaypointCourse[WayPoint_Index][0];
                 qE=WaypointCourse[WayPoint_Index][1];
                 ground_course_desired=Straight_Line( qN, qE );
+
+                //This is where we do straight line on the first leg only!
+                if (WayPoint_Index==1) {
+                    //Straight_Line_Follow(float pNend, float pEend, float pNstart, float pEstart);
+                    ground_course_desired=Straight_Line_Follow(WaypointCourse[WayPoint_Index][0],WaypointCourse[WayPoint_Index][1], WaypointCourse[WayPoint_Index-1][0], WaypointCourse[WayPoint_Index-1][1]);
+                }
+
                 TurningMode=0.0f; //Use Straight Line Gains
                 //Check and see if I need to increment
                     //Compute the Vector from the Waypoint to the Current Position
@@ -569,6 +604,12 @@ Old_Manual_Inc=aah_parameters.Manual_Inc;
         if (TurningMode>0.5f && aah_parameters.FF_On>0.5f){
             PitchEffort= PitchEffort+aah_parameters.FF_Pitch;
         }
+
+        //If in straight mode, add the feedforward
+        if (TurningMode<0.5f){
+            PitchEffort=aah_parameters.S_FF_Pitch+PitchEffort;
+        }
+
         // Do bounds checking to keep the roll correction within the -1..1 limits of the servo output
         if (PitchEffort > 1.0f) {
             PitchEffort = 1.0f;
@@ -602,12 +643,12 @@ Old_Manual_Inc=aah_parameters.Manual_Inc;
             } else {
                 throttle_servo_out = throttle_effort;
             }
-        } else {//This conditional will be entered if Enable Way is low but S_Constant_Throttle is high
+        } else {//This conditional will be entered if in straight line mode
             if (aah_parameters.S_Constant_Throttle>0.5f){
-                if (aah_parameters.Go_to_Way>0.5f) {
+                if (aah_parameters.Go_to_Way>0.5f) {  //This conditional is when we are going to a single waypoint
                     throttle_servo_out = aah_parameters.Course_Straight_Throttle;
                 } else{
-                    if (PNout*pN+PEout*pE>aah_parameters.Course_Offset) {
+                    if (PNout*pN+PEout*pE>-aah_parameters.Course_Offset) {
                         throttle_servo_out = aah_parameters.Trans_race_throt;
                     } else {
                         throttle_servo_out = aah_parameters.Course_Straight_Throttle;
