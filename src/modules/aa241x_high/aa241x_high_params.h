@@ -124,6 +124,7 @@ struct aah_params {
     float S_FF_Pitch;
 
     float PrepCourse;
+    float Min_Pitch_Angle;
     // TODO: add custom parameter variable names here......
 
 };
@@ -203,6 +204,7 @@ struct aah_param_handles {
     param_t FF_Pitch;
     param_t S_FF_Pitch;
     param_t PrepCourse;
+    param_t Min_Pitch_Angle;
 };
 
 /**

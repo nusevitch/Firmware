@@ -441,6 +441,13 @@ PARAM_DEFINE_FLOAT(AAH_KANGLE, 0.0f);
 */
 PARAM_DEFINE_FLOAT(AAH_PREPCOURSE, 0.0f);
 
+/**
+* @unit none 						(the unit attribute (not required, just helps for sanity))
+* @group AA241x High Params		(always include this)
+*/
+PARAM_DEFINE_FLOAT(AAH_MINPITCHD, 0.0f);
+
+
 
 
 
@@ -518,8 +525,7 @@ int aah_parameters_init(struct aah_param_handles *h)
     h-> S_FF_Pitch= param_find("AAH_FF_SPITCH");
 
     h-> PrepCourse= param_find("AAH_PREPCOURSE");
-
-
+    h-> Min_Pitch_Angle= param_find("AAH_MINPITCHD");
     // TODO: add the above line for each of your custom parameters........
 
     return OK;
@@ -595,6 +601,8 @@ int aah_parameters_update(const struct aah_param_handles *h, struct aah_params *
     param_get(h->FF_Pitch, & (p->FF_Pitch));
     param_get(h->S_FF_Pitch, & (p->S_FF_Pitch));
     param_get(h->PrepCourse, & (p->PrepCourse));
+    param_get(h->Min_Pitch_Angle, & (p->Min_Pitch_Angle));
+
 
 
 

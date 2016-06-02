@@ -264,7 +264,7 @@ void flight_control() {
     if (hrt_absolute_time() - previous_loop_timestamp > 500000.0f) { // Run if more than 0.5 seconds have passes since last loop,
                                                                      //	should only occur on first engagement since this is 59Hz loop
         yaw_desired = yaw; 							// yaw_desired already defined in aa241x_high_aux.h
-
+        TurningMode=0.0f;
         //Inialize these values to their initial state (ie, maintain alltitude and heading
         Init_altitude_desired = position_D_gps; 		// altitude_desired needs to be declared
         Init_ground_course_desired = ground_course;    //Desired Course
@@ -288,6 +288,7 @@ void flight_control() {
     }
 
 //float D=20.0f;  //HOw far back to move the last waypoint
+float RotateAngle=210.0f*pi/180.0f-tiltrad;
 
     float WaypointCourse[][3]={ {SN, SE, 0.0f  },
             {Pylon1N+aah_parameters.Course_Radius/LegLength*(Pylon1E-SE), Pylon1E-aah_parameters.Course_Radius/LegLength*(Pylon1N-SN),        0},
@@ -295,7 +296,7 @@ void flight_control() {
             {Pylon2N+aah_parameters.Course_Radius/LegLength*(Pylon2E-Pylon1E), Pylon2E-aah_parameters.Course_Radius/LegLength*(Pylon2N-Pylon1N),     0},
             {Pylon2N, Pylon2E,   1},
             {SN, SE,             0},
-            {SN+aah_parameters.Course_Radius, SE,   0},
+            {SN+cosf(RotateAngle)*aah_parameters.Course_Radius, SE+aah_parameters.Course_Radius*sinf(RotateAngle),   0},
             //{SN  + D*cosf(-tiltrad+150.0f/180.0f*pi), SE + D*cosf(-tiltrad+150.0f/180.0f*pi),             0},  //These last two lines have not yet been made totally general
             //{SN  + D*cosf(-tiltrad+150.0f/180.0f*pi)+aah_parameters.Course_Radius, SE + D*cosf(-tiltrad+150.0f/180.0f*pi),   0},
         };
@@ -381,11 +382,11 @@ Old_Manual_Inc=aah_parameters.Manual_Inc;
             TurningMode=0.0f; //Use Straight Line Gains
 
             if (aah_parameters.PrepCourse>0.5f){
-
+                 TurningMode=0.0f;
                 qN = lineWaypoints[lineIndex+1][0]-lineWaypoints[lineIndex][0];
-                qE = lineWaypoints[lineIndex+1][1]-lineWaypoints[lineIndex][0];
+                qE = lineWaypoints[lineIndex+1][1]-lineWaypoints[lineIndex][1];
                 float pNC = position_N-lineWaypoints[lineIndex+1][0];
-                float pEC = position_E-lineWaypoints[lineIndex+1][0];
+                float pEC = position_E-lineWaypoints[lineIndex+1][1];
                 if (qN*pNC+qE*pEC>0.0f){
                     lineIndex = lineIndex+1;
                     //We'd like to have a failsafe if we miss the gate, something like this
@@ -406,8 +407,8 @@ Old_Manual_Inc=aah_parameters.Manual_Inc;
                 //Perform the Straight Line Stuff
                 qN=WaypointCourse[WayPoint_Index][0];
                 qE=WaypointCourse[WayPoint_Index][1];
-                ground_course_desired=Straight_Line( qN, qE );
-
+//                ground_course_desired=Straight_Line( qN, qE );
+                ground_course_desired=Straight_Line_Follow( WaypointCourse[WayPoint_Index][0],WaypointCourse[WayPoint_Index][1], WaypointCourse[WayPoint_Index-1][0], WaypointCourse[WayPoint_Index-1][1] );
                 //This is where we do straight line on the first leg only!
                 if (WayPoint_Index==1) {
                     //Straight_Line_Follow(float pNend, float pEend, float pNstart, float pEstart);
@@ -426,10 +427,15 @@ Old_Manual_Inc=aah_parameters.Manual_Inc;
                     PNout=(WaypointCourse[WayPoint_Index][1]- WaypointCourse[WayPoint_Index+1][1])/aah_parameters.Course_Radius;
                     //Parameters to Include R, D
 
-                //D is a distance Parameter that shows how far the offset plane is
-                if (PNout*pN+PEout*pE>0.0f ) {
-                    WayPoint_Index=WayPoint_Index+1; //Increment the INdex if we havecrossed the plane
+                if (turn_num != 2) {
+                    //D is a distance Parameter that shows how far the offset plane is
+                    if (PNout*pN+PEout*pE>0.0f ) {
+                        WayPoint_Index=WayPoint_Index+1; //Increment the INdex if we havecrossed the plane
+                    }
                 }
+
+
+
 
             } else {
                 //Enter Turning Mode
@@ -535,8 +541,8 @@ Old_Manual_Inc=aah_parameters.Manual_Inc;
         pitch_desired = Max_Pitch_Angle;
         //Anti-Windup
         integral_altitude_error=integral_altitude_error-(altitude_desired - position_D_gps)*Dt;
-    } else if ( pitch_desired< -Max_Pitch_Angle ) {
-        pitch_desired = -Max_Pitch_Angle;
+    } else if ( pitch_desired< -aah_parameters.Min_Pitch_Angle ) {
+        pitch_desired = -aah_parameters.Min_Pitch_Angle;
         //More AntiWindup
         integral_altitude_error=integral_altitude_error-(altitude_desired - position_D_gps)*Dt;
     }
@@ -608,10 +614,10 @@ Old_Manual_Inc=aah_parameters.Manual_Inc;
             RollEffort= RollEffort+aah_parameters.FF_Roll;
         }
         // Do bounds checking to keep the roll correction within the -1..1 limits of the servo output
-            if (RollEffort > 1.0f) {
-                RollEffort = 1.0f;
-            } else if (RollEffort < -1.0f ) {
-                RollEffort = -1.0f;
+            if (RollEffort > 0.65f) {
+                RollEffort = 0.65f;
+            } else if (RollEffort < -0.65f ) {
+                RollEffort = -0.65f;
             }
             roll_servo_out = RollEffort; //throttle_effort;
     }
@@ -631,7 +637,7 @@ Old_Manual_Inc=aah_parameters.Manual_Inc;
             PitchEffort=aah_parameters.S_FF_Pitch+PitchEffort;
         }
 
-        // Do bounds checking to keep the roll correction within the -1..1 limits of the servo output
+        // Do bounds checking to kseep the roll correction within the -1..1 limits of the servo output
         if (PitchEffort > 1.0f) {
             PitchEffort = 1.0f;
         } else if (PitchEffort < -1.0f ) {
@@ -695,13 +701,13 @@ Old_Manual_Inc=aah_parameters.Manual_Inc;
                 throttle_servo_out = 0.8; // Line in N direction
             }
             if (lineIndex == 2){
-                throttle_servo_out = 0.8; // Line in NE direction
+                throttle_servo_out = 1.0f; // Line in NE direction
             }
             if (lineIndex == 3){
-                throttle_servo_out = 1.0; // Line in E direction to start gate
+                throttle_servo_out = 1.0f; // Line in E direction to start gate
             }
             if (lineIndex == 4){
-                throttle_servo_out = 0.7; // Line in W direction back to re-attempt gate crossing
+                throttle_servo_out = 1.0f; // Line in W direction back to re-attempt gate crossing
             }
         }
     }
