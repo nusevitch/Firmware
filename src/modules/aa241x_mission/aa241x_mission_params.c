@@ -65,7 +65,7 @@ PARAM_DEFINE_FLOAT(AA_ALT_MAX, 60.0f);
  * @unit meters
  * @group AA241x Mission
  */
-PARAM_DEFINE_FLOAT(AAMIS_SPOS_N, 0.0f);//150.0f);
+PARAM_DEFINE_FLOAT(AAMIS_SPOS_N, 150.0f) //0.0f);//150.0f);
 
 /**
  * East location of starting gate pylon
@@ -73,7 +73,7 @@ PARAM_DEFINE_FLOAT(AAMIS_SPOS_N, 0.0f);//150.0f);
  * @unit minutes
  * @group AA241x Mission
  */
-PARAM_DEFINE_FLOAT(AAMIS_SPOS_E, 100.0f);//-96.0f);
+PARAM_DEFINE_FLOAT(AAMIS_SPOS_E, -96.0f); //-96.0f);
 
 /**
  * Minimum allowed radius from pylon
@@ -89,7 +89,7 @@ PARAM_DEFINE_FLOAT(AAMIS_RAD_KPT, 5.0f);
  * @unit degrees
  * @group AA241x Mission
  */
-PARAM_DEFINE_FLOAT(AAMIS_TILT, -150.0f);//-25.0f);
+PARAM_DEFINE_FLOAT(AAMIS_TILT, -25.0f; //-150.0f);//-25.0f);
 
 /**
  * Length of straight legs
@@ -97,7 +97,7 @@ PARAM_DEFINE_FLOAT(AAMIS_TILT, -150.0f);//-25.0f);
  * @unit meters
  * @group AA241x Mission
  */
-PARAM_DEFINE_FLOAT(AAMIS_LEG_LEN, 111.8f);
+PARAM_DEFINE_FLOAT(AAMIS_LEG_LEN, 243.84f) //111.8f);
 
 /**
  * Width of start/finish gate
@@ -105,7 +105,7 @@ PARAM_DEFINE_FLOAT(AAMIS_LEG_LEN, 111.8f);
  * @unit meters
  * @group AA241x Mission
  */
-PARAM_DEFINE_FLOAT(AAMIS_GTE_WID, 100.0f);//50.0f);
+PARAM_DEFINE_FLOAT(AAMIS_GTE_WID, 50.0f)//100.0f);//50.0f);
 
 /**
  * Activate/deactivate mission failure. 1 means mission failure kills the current mission,

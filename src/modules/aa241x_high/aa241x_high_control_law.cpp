@@ -131,10 +131,10 @@ float PEout;
 //                         };
 
 float pi=3.14159f;
-float LegLength=111.8034f;
-float tiltrad=-150*pi/180.0f;
-float SE=100.0f;
-float SN=0.0f;
+float LegLength=243.84f;//111.8034f;
+float tiltrad=-25*pi/180.0f; //-150*pi/180.0f;
+float SE=-96.0f;    //100.0f;
+float SN=150.0f;    //0.0f;
 
 
 float Pylon1E  = roundf(SE + LegLength*cosf(tiltrad));
@@ -154,6 +154,7 @@ float lineWaypoints[][2] = {{-100.0f, 0.0f},
         {150.0f, -96.0f}, // Starting gate center location
         {150.0f, -125.0f}, // If cross plane but for some reason don't trigger race start (miss gate), loop back and try again.
         };
+
 int lineIndex = 0;
 
 
@@ -303,7 +304,6 @@ void flight_control() {
     //{SN+aah_parameters.Course_Radius, SE,   0},
 
 
-
 //If AAH_SPEED is assigned a value, then this will force a desired ground speed
     if (aah_parameters.Desired_Speed>0.5f){
         groundspeed_desired=aah_parameters.Desired_Speed;
@@ -388,9 +388,10 @@ Old_Manual_Inc=aah_parameters.Manual_Inc;
                 float pEC = position_E-lineWaypoints[lineIndex+1][0];
                 if (qN*pNC+qE*pEC>0.0f){
                     lineIndex = lineIndex+1;
-                    if (lineIndex > 4) {
-                        lineIndex = 3;
-                    }
+                    //We'd like to have a failsafe if we miss the gate, something like this
+//                    if (lineIndex > 4) {
+//                        lineIndex = 3;
+//                    }
                 }
 
                 ground_course_desired = Straight_Line_Follow(lineWaypoints[lineIndex+1][0],lineWaypoints[lineIndex+1][1],lineWaypoints[lineIndex][0],lineWaypoints[lineIndex][1]);
