@@ -147,13 +147,15 @@ float Pylon2N  = roundf(Pylon1N + LegLength*sinf(tiltrad-2.0f*pi/3.0f));
 //This array is to help know when to increment turns
 int OurTurnNum[]={0, 0, 1, 0, 2, 0, 0};
 
-float lineWaypoints[][2] = {{-100.0f, -150.0f},
+float lineWaypoints[][2] = {{-100.0f, 0.0f},
         {50.0f, -150.0f},
         {125.0f, -150.0f},
-        {150.0f, -125.0f},
-        {150.0f, -96.0f},
+        {150.0f, -125.0f}, // Start of 100% throttle section
+        {150.0f, -96.0f}, // Starting gate center location
+        {150.0f, -125.0f}, // If cross plane but for some reason don't trigger race start (miss gate), loop back and try again.
         };
 int lineIndex = 0;
+
 
 
 //These Waypoints Fly a simple course, allows for testing switching
@@ -370,12 +372,34 @@ Old_Manual_Inc=aah_parameters.Manual_Inc;
             if (turn_num==0){
                 WayPoint_Index=WayPoint_Index+1;  //Increment Waypoint INdex if we've crossed the starting line
             }
+
             //Go to the First Waypoint
-            qN=WaypointCourse[0][0];
-            qE=WaypointCourse[0][1];
-            ground_course_desired=Straight_Line( qN, qE );
+            //qN=WaypointCourse[0][0];
+            //qE=WaypointCourse[0][1];
+            //ground_course_desired=Straight_Line( qN, qE );
+
             TurningMode=0.0f; //Use Straight Line Gains
 
+            if (aah_parameters.PrepCourse>0.5f){
+
+                qN = lineWaypoints[lineIndex+1][0]-lineWaypoints[lineIndex][0];
+                qE = lineWaypoints[lineIndex+1][1]-lineWaypoints[lineIndex][0];
+                float pNC = position_N-lineWaypoints[lineIndex+1][0];
+                float pEC = position_E-lineWaypoints[lineIndex+1][0];
+                if (qN*pNC+qE*pEC>0.0f){
+                    lineIndex = lineIndex+1;
+                    if (lineIndex > 4) {
+                        lineIndex = 3;
+                    }
+                }
+
+                ground_course_desired = Straight_Line_Follow(lineWaypoints[lineIndex+1][0],lineWaypoints[lineIndex+1][1],lineWaypoints[lineIndex][0],lineWaypoints[lineIndex][1]);
+            } else{   //If Prep Course is off, this will just try and go tot the center of the waypoint
+                qN=WaypointCourse[0][0];
+                qE=WaypointCourse[0][1];
+                ground_course_desired=Straight_Line( qN, qE );
+
+            }
         } else {  //This Conditional Covers all points except the first one
             if (WaypointCourse[WayPoint_Index][2]<0.5f) {
                 //Perform the Straight Line Stuff
@@ -421,7 +445,7 @@ Old_Manual_Inc=aah_parameters.Manual_Inc;
                 TurningMode=1.0f; //Use Turning Gains
             }
         }
-    }       //End of Enable Waypoints Parameter
+    }  //End of Enable Waypoints Parameter
 
     //Set index back to 0 if the limit is reached
     if (WayPoint_Index==6){
@@ -650,18 +674,38 @@ Old_Manual_Inc=aah_parameters.Manual_Inc;
                         throttle_servo_out = aah_parameters.Course_Straight_Throttle;
                     }
                 }
+
+                //Put the last one on high no matter what
+                if (turn_num==2){
+                    throttle_servo_out = aah_parameters.Course_Straight_Throttle;
+                }
+
             } else {
                 throttle_servo_out = throttle_effort;
             }
         }
+
+         // Throttle Settings for Starting the Course
+        if (WayPoint_Index==0 && aah_parameters.PrepCourse>0.5f){
+            if (lineIndex == 0){
+                throttle_servo_out = 0.7; // Line in NW direction to western lake edge.
+            }
+            if (lineIndex == 1){
+                throttle_servo_out = 0.8; // Line in N direction
+            }
+            if (lineIndex == 2){
+                throttle_servo_out = 0.8; // Line in NE direction
+            }
+            if (lineIndex == 3){
+                throttle_servo_out = 1.0; // Line in E direction to start gate
+            }
+            if (lineIndex == 4){
+                throttle_servo_out = 0.7; // Line in W direction back to re-attempt gate crossing
+            }
+        }
     }
 
-//    //This stuff allows for good starting of the course
-//    if (aah_parameters.CoursePrep>0.5f) {
-//        if (WayPoint_Index==0) {
-//            //Case Switch Statement that covers starting throttle
-//        }
-//    }
+
 
 
 

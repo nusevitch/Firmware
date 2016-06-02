@@ -435,6 +435,14 @@ PARAM_DEFINE_FLOAT(AAH_KANGLE, 0.0f);
 //NATHAN: The @unit none and @group AA241x High Params are necessary despite being in a comment
 // TODO: define custom parameters here
 
+/**
+* @unit none 						(the unit attribute (not required, just helps for sanity))
+* @group AA241x High Params		(always include this)
+*/
+PARAM_DEFINE_FLOAT(AAH_PREPCOURSE, 0.0f);
+
+
+
 
 
 int aah_parameters_init(struct aah_param_handles *h)
@@ -508,6 +516,9 @@ int aah_parameters_init(struct aah_param_handles *h)
     h-> FF_Roll=param_find("AAH_FF_ROLL");
     h-> FF_Pitch= param_find("AAH_FF_PITCH");
     h-> S_FF_Pitch= param_find("AAH_FF_SPITCH");
+
+    h-> PrepCourse= param_find("AAH_PREPCOURSE");
+
 
     // TODO: add the above line for each of your custom parameters........
 
@@ -583,6 +594,8 @@ int aah_parameters_update(const struct aah_param_handles *h, struct aah_params *
     param_get(h->FF_Roll, & (p->FF_Roll));
     param_get(h->FF_Pitch, & (p->FF_Pitch));
     param_get(h->S_FF_Pitch, & (p->S_FF_Pitch));
+    param_get(h->PrepCourse, & (p->PrepCourse));
+
 
 
 
