@@ -147,6 +147,14 @@ float Pylon2N  = roundf(Pylon1N + LegLength*sinf(tiltrad-2.0f*pi/3.0f));
 //This array is to help know when to increment turns
 int OurTurnNum[]={0, 0, 1, 0, 2, 0, 0};
 
+float lineWaypoints[][2] = {{-100.0f, -150.0f},
+        {50.0f, -150.0f},
+        {125.0f, -150.0f},
+        {150.0f, -125.0f},
+        {150.0f, -96.0f},
+        };
+int lineIndex = 0;
+
 
 //These Waypoints Fly a simple course, allows for testing switching
 //float Waypoint2[][2]= {{150.0f, 0.0f },   //Bottom Left
@@ -202,7 +210,6 @@ float Straight_Line_Follow(float pNend, float pEend, float pNstart, float pEstar
    return Xc;
 }
 
-
 float Turn(float qN, float qE);
 // Currently this is in a testing configuration, can be changed to waypoints when needed.
 //float Turn(float Waypoint[][2], int &WayPoint_Index){
@@ -224,17 +231,6 @@ float Turn(float qN, float qE) {
 
     float Xc=phi+(3.14159f*0.5f+atanf(aah_parameters.K_Orbit*(d-aah_parameters.Turn_Radius)/aah_parameters.Turn_Radius));
 
-
-//    //Adjust for the way Ground Course is measure (-pi,pi]
-//    if (Xc>3.14159f){
-//        Xc=Xc-2.0f*3.14159f;
-//    }
-
-//    if (Xc<-3.14159f){
-//        Xc=Xc+2.0f*3.14159f;
-//    }
-
-
     return Xc;
 }
 
@@ -243,7 +239,6 @@ float Straight_Line(float qN, float qE){
 
     //Compute Xq based on the desired target point
     Xq=atan2f(qE-position_E,qN-position_N);
-
 
         if (Xq-ground_course>3.14159f){
             Xq=Xq-2.0f*3.14159f;
@@ -278,6 +273,7 @@ void flight_control() {
         integral_sideslip_error=0.0f; //Initialize Side Slip Error Hold Loop
         integral_groundspeed_error=0.0f;
         WayPoint_Index=0;
+        lineIndex = 0;
         //This seems to look right....
         if( aah_parameters.Enable_Orbit>0.5f) {
             qN=50.0f;//aah_parameters.Turn_Radius*cosf(ground_course+3.14159f/2.0f)+position_N;
@@ -459,7 +455,7 @@ Old_Manual_Inc=aah_parameters.Manual_Inc;
         Rudder_Gear=aah_parameters.S_Rudder_Prop;
     }
 
-    // Compue the Integral of the Error. Add anti windup here?
+    // Compute the Integral of the Error. Add anti windup here?
     integral_course_error=integral_course_error+(ground_course_desired - ground_course)*Dt;
     float proportionalCourseCorrection = proportional_course_gain * (ground_course_desired - ground_course);
     float IntegralCourseCorrection = aah_parameters.integral_course_gain * (integral_course_error);  //how to get Derivative INt
@@ -659,5 +655,14 @@ Old_Manual_Inc=aah_parameters.Manual_Inc;
             }
         }
     }
+
+//    //This stuff allows for good starting of the course
+//    if (aah_parameters.CoursePrep>0.5f) {
+//        if (WayPoint_Index==0) {
+//            //Case Switch Statement that covers starting throttle
+//        }
+//    }
+
+
 
 }
