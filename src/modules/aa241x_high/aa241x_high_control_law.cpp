@@ -147,7 +147,7 @@ float Pylon2N  = roundf(Pylon1N + LegLength*sinf(tiltrad-2.0f*pi/3.0f));
 //This array is to help know when to increment turns
 int OurTurnNum[]={0, 0, 1, 0, 2, 0, 0};
 
-float lineWaypoints[][2] = {{-100.0f, 0.0f},
+float lineWaypoints[][2] = {{-100.0f, -75.0f},
         {50.0f, -150.0f},
         {125.0f, -150.0f},
         {150.0f, -125.0f}, // Start of 100% throttle section
